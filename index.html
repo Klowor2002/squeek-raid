@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQUEEK RAID — a Squeekchain Genesis boss-raid game</title>
+<meta name="description" content="SQUEEK RAID: a co-op boss-raid game powered by Squeektoshi, Squeekchain's real hamster. The wheel is real. The raid is real. The points are not money.">
+<style>
+  :root{
+    --bg:#14100c;
+    --bg2:#1d1712;
+    --panel:#241c15;
+    --panel2:#2c2218;
+    --line:#3d2f21;
+    --amber:#f5a623;
+    --amber2:#ffcf6e;
+    --cheese:#ffd94d;
+    --cream:#f7ead2;
+    --muted:#b8a58c;
+    --red:#e5484d;
+    --green:#46a758;
+    --blue:#53b1fd;
+    --perfect:#ffd94d;
+    --good:#7ee2a0;
+    --weak:#8a7a63;
+    --hp:#e5484d;
+    --hpbg:#40201f;
+    --energy:#f5a623;
+    --radius:14px;
+    --shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #2e2113 0%, rgba(46,33,19,0) 60%),
+      linear-gradient(180deg, var(--bg2), var(--bg) 40%);
+    color:var(--cream);
+    font-family:"Avenir Next","Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+    min-height:100vh;
+  }
+  a{color:var(--amber2)}
+  a:hover{color:var(--cheese)}
+  .wrap{max-width:1080px;margin:0 auto;padding:16px 14px 40px}
+
+  /* ---------- header ---------- */
+  header.top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:6px 0 14px}
+  .logo{font-size:clamp(28px,5vw,42px);font-weight:900;letter-spacing:.5px;line-height:1;
+    color:var(--cheese);text-shadow:0 2px 0 #7a4d00, 0 6px 18px rgba(245,166,35,.35)}
+  .logo span{color:var(--amber)}
+  .tagline{color:var(--muted);font-size:14px}
+  .badge-live{margin-left:auto;display:inline-flex;align-items:center;gap:8px;
+    background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--weak)}
+  .dot.live{background:var(--green);box-shadow:0 0 10px var(--green)}
+  .dot.stale{background:var(--red);box-shadow:0 0 10px var(--red)}
+
+  /* ---------- live strip ---------- */
+  .livestrip{display:grid;grid-template-columns:220px 1fr;gap:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+  @media (max-width:640px){.livestrip{grid-template-columns:1fr}}
+  #wheelCanvas{width:220px;height:160px;max-width:100%;display:block;margin:0 auto}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-content:start}
+  .stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  .stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  .stat .v{font-size:20px;font-weight:800;color:var(--cream);margin-top:2px}
+  .stat .v small{font-size:12px;color:var(--muted);font-weight:600}
+  .buffbanner{grid-column:1/-1;display:none;border-radius:10px;padding:8px 12px;font-weight:700;font-size:14px;
+    background:linear-gradient(90deg,#4a3205,#6b4a08);border:1px solid var(--amber);color:var(--amber2)}
+  body.buffed .buffbanner{display:block}
+  .napbanner{grid-column:1/-1;display:none;border-radius:10px;padding:8px 12px;font-size:14px;
+    background:#1c2733;border:1px solid #2c4257;color:#a9c8e8}
+  body.napping .napbanner{display:block}
+
+  /* ---------- layout ---------- */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:14px;margin-top:14px}
+  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+  .card h2{margin:0 0 10px;font-size:18px;letter-spacing:.02em}
+  .card h3{margin:14px 0 8px;font-size:15px;color:var(--amber2)}
+
+  /* ---------- boss ---------- */
+  .bosshead{display:flex;gap:14px;align-items:center}
+  .boss-art{position:relative;width:104px;height:104px;flex:0 0 auto;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, var(--bosslight,#9be15d), var(--boss,#5da23a) 70%);
+    border:3px solid rgba(0,0,0,.35);box-shadow:inset 0 -14px 24px rgba(0,0,0,.25)}
+  .boss-art::before,.boss-art::after{content:"";position:absolute;top:36px;width:15px;height:19px;border-radius:50%;
+    background:#14100c;box-shadow:inset 0 3px 0 #fff3}
+  .boss-art::before{left:28px}
+  .boss-art::after{right:28px}
+  .boss-art .mouth{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);
+    width:38px;height:18px;border:3px solid #14100c;border-top:none;border-radius:0 0 24px 24px}
+  .boss-art .crown{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:0;height:0;
+    border-left:12px solid transparent;border-right:12px solid transparent;border-bottom:20px solid var(--cheese)}
+  .bossname{font-size:clamp(20px,3.4vw,27px);font-weight:900;line-height:1.1}
+  .bosstitle{color:var(--muted);font-size:13px;margin-top:2px}
+  .hpwrap{margin-top:14px}
+  .hplabel{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:5px}
+  .hplabel b{color:var(--cream)}
+  .hpbar{height:22px;background:var(--hpbg);border:1px solid var(--line);border-radius:999px;overflow:hidden}
+  .hpfill{height:100%;width:100%;background:linear-gradient(90deg,#ff7a59,var(--hp));
+    border-radius:999px;transition:width .45s cubic-bezier(.2,.8,.2,1)}
+  .arena{position:relative;margin-top:8px}
+  .floater{position:absolute;left:50%;top:8px;transform:translateX(-50%);font-weight:900;pointer-events:none;
+    font-size:30px;color:var(--cheese);text-shadow:0 2px 0 #000,0 0 18px rgba(255,217,77,.55);
+    animation:floatUp 1s ease-out forwards;z-index:5;white-space:nowrap}
+  .floater.good{color:var(--good);font-size:24px}
+  .floater.weak{color:var(--weak);font-size:19px}
+  .floater.hamster{color:var(--blue);font-size:24px}
+  @keyframes floatUp{0%{opacity:0;transform:translate(-50%,10px) scale(.8)}
+    15%{opacity:1;transform:translate(-50%,0) scale(1.12)}
+    100%{opacity:0;transform:translate(-50%,-72px) scale(1)}}
+  body.shake .bosscol{animation:shake .32s linear}
+  @keyframes shake{0%,100%{transform:translate(0)}20%{transform:translate(-7px,3px)}
+    40%{transform:translate(6px,-4px)}60%{transform:translate(-5px,-2px)}80%{transform:translate(4px,2px)}}
+
+  /* ---------- timing bar ---------- */
+  .timing{margin-top:18px}
+  .bar{position:relative;height:34px;border-radius:999px;border:1px solid var(--line);
+    background:linear-gradient(90deg,#3a2c1c,#4a3823 38%,#4a3823 62%,#3a2c1c);overflow:hidden}
+  .zone{position:absolute;top:0;bottom:0}
+  .zone.good{background:rgba(126,226,160,.28)}
+  .zone.perfect{background:rgba(255,217,77,.75);box-shadow:0 0 14px rgba(255,217,77,.7)}
+  .marker{position:absolute;top:-2px;bottom:-2px;width:6px;margin-left:-3px;border-radius:3px;
+    background:#fff;box-shadow:0 0 10px #fff,0 0 3px #fff}
+  .zonelabels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.06em}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:stretch}
+  button{font:inherit;font-weight:800;border-radius:12px;border:1px solid var(--line);
+    background:var(--panel2);color:var(--cream);padding:12px 18px;cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--amber)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+  #attackBtn{flex:1 1 200px;font-size:21px;letter-spacing:.04em;color:#241a05;
+    background:linear-gradient(180deg,var(--amber2),var(--amber));border-color:#8a5f06;
+    box-shadow:0 6px 0 #8a5f06, 0 12px 24px rgba(0,0,0,.4)}
+  #attackBtn:active:not(:disabled){transform:translateY(4px);box-shadow:0 2px 0 #8a5f06}
+  .energyline{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}
+  .energy p{margin:0}
+  .pips{display:inline-flex;gap:4px;flex-wrap:wrap}
+  .pip{width:16px;height:22px;border-radius:5px;background:#3a2c1c;border:1px solid var(--line)}
+  .pip.on{background:linear-gradient(180deg,var(--amber2),var(--energy));box-shadow:0 0 8px rgba(245,166,35,.6)}
+  .hint{font-size:13px;color:var(--muted)}
+
+  /* ---------- side column ---------- */
+  .pip-talk{display:flex;gap:12px;align-items:flex-start}
+  .pip-face{position:relative;width:62px;height:62px;flex:0 0 auto;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#ffe9bd,#e8b06a 72%);border:2px solid rgba(0,0,0,.3)}
+  .pip-face::before,.pip-face::after{content:"";position:absolute;top:24px;width:8px;height:11px;border-radius:50%;background:#14100c}
+  .pip-face::before{left:16px}
+  .pip-face::after{right:16px}
+  .pip-face .nose{position:absolute;left:50%;top:36px;transform:translateX(-50%);width:10px;height:7px;border-radius:50%;background:#c96f4a}
+  .pip-face .ear{position:absolute;top:-7px;width:18px;height:18px;border-radius:50%;background:#e8b06a;border:2px solid rgba(0,0,0,.25)}
+  .pip-face .ear.l{left:2px}.pip-face .ear.r{right:2px}
+  #pipLine{font-size:15px;line-height:1.45;margin:2px 0 0}
+  #pipLine .who{color:var(--amber2);font-weight:800}
+  .kv{display:grid;grid-template-columns:1fr auto;gap:5px 12px;font-size:14px}
+  .kv dt{color:var(--muted)}
+  .kv dd{margin:0;font-weight:800;text-align:right}
+  .xpbar{height:12px;background:#1a140e;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-top:6px}
+  .xpfill{height:100%;background:linear-gradient(90deg,var(--blue),#9bd1ff);width:0%;transition:width .4s ease}
+  .badges{display:flex;flex-wrap:wrap;gap:7px}
+  .badge{font-size:12.5px;font-weight:700;border:1px solid var(--line);border-radius:999px;padding:5px 11px;
+    background:var(--panel2);color:var(--muted)}
+  .badge.earned{color:#241a05;background:linear-gradient(180deg,var(--amber2),var(--amber));border-color:#8a5f06}
+  .log{list-style:none;margin:0;padding:0;max-height:300px;overflow:auto;font-size:13.5px}
+  .log li{padding:8px 10px;border:1px solid var(--line);border-radius:10px;margin-bottom:7px;background:var(--panel2);line-height:1.4}
+  .log .t{color:var(--muted);font-size:12px}
+  .log .ham{color:var(--blue);font-weight:700}
+  .rowbtns{display:flex;gap:8px;flex-wrap:wrap}
+  .rowbtns button{padding:9px 13px;font-size:13.5px}
+  footer{margin-top:22px;color:var(--muted);font-size:13.5px;line-height:1.6}
+  footer .rules{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:13px 16px}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <div class="logo">SQUEEK <span>RAID</span></div>
+      <div class="tagline">A boss raid powered by a real hamster on a real wheel.</div>
+    </div>
+    <div class="badge-live" role="status" aria-label="Connection status">
+      <span class="dot" id="liveDot"></span><span id="liveText">Connecting to the wheel…</span>
+    </div>
+  </header>
+
+  <!-- LIVE STRIP -->
+  <section class="livestrip" aria-label="Live hamster wheel data">
+    <div>
+      <canvas id="wheelCanvas" width="440" height="320" aria-label="Animated pixel hamster on a wheel, spinning at the real wheel speed"></canvas>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="k">Distance tonight</div><div class="v" id="stDistance">—</div></div>
+      <div class="stat"><div class="k">Wheel speed</div><div class="v" id="stSpeed">—</div></div>
+      <div class="stat"><div class="k">RPM</div><div class="v" id="stRpm">—</div></div>
+      <div class="stat"><div class="k">Open round</div><div class="v" id="stRound">—</div></div>
+      <div class="stat"><div class="k">Next settlement in</div><div class="v" id="stCountdown">—</div></div>
+      <div class="stat"><div class="k">Squeektoshi raid damage</div><div class="v" id="stHamDamage">0</div></div>
+      <div class="buffbanner" role="status">Squeektoshi is RUNNING — Perfect window widened, mega-crits armed. Strike now!</div>
+      <div class="napbanner" role="status">Squeektoshi is napping. Wheel energy is paused — use Focus to keep raiding.</div>
+    </div>
+  </section>
+
+  <div class="grid">
+    <!-- BOSS COLUMN -->
+    <section class="card bosscol" aria-label="Boss battle">
+      <div class="arena" id="arena">
+        <div class="bosshead">
+          <div class="boss-art" id="bossArt" aria-hidden="true"><span class="crown" id="bossCrown"></span><span class="mouth"></span></div>
+          <div>
+            <div class="bossname" id="bossName">…</div>
+            <div class="bosstitle" id="bossTitle">…</div>
+            <div class="bosstitle" id="bossMeta"></div>
+          </div>
+        </div>
+        <div class="hpwrap">
+          <div class="hplabel"><span>Boss HP</span><b id="hpText">—</b></div>
+          <div class="hpbar" role="progressbar" aria-label="Boss health" id="hpBar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+            <div class="hpfill" id="hpFill"></div>
+          </div>
+        </div>
+
+        <div class="timing">
+          <div class="bar" id="timingBar" aria-hidden="true">
+            <div class="zone good" id="zoneGood"></div>
+            <div class="zone perfect" id="zonePerfect"></div>
+            <div class="marker" id="marker"></div>
+          </div>
+          <div class="zonelabels"><span>Weak</span><span>Good</span><span>Perfect</span><span>Good</span><span>Weak</span></div>
+        </div>
+
+        <div class="controls">
+          <button id="attackBtn" aria-label="Attack the boss (or press Space)">ATTACK</button>
+          <button id="focusBtn" aria-label="Focus: gain 1 energy, 20 second cooldown">Focus +1</button>
+        </div>
+
+        <div class="energyline">
+          <span class="hint" id="energyText">Energy</span>
+          <span class="pips" id="energyPips" aria-hidden="true"></span>
+        </div>
+        <p class="hint">Every 25 m the real wheel turns earns you +1 Energy. Time your strike: the white marker is judged where it stops — dead centre is a Perfect crit.</p>
+      </div>
+    </section>
+
+    <!-- SIDE COLUMN -->
+    <div>
+      <section class="card" aria-label="Pip the sidekick">
+        <div class="pip-talk">
+          <div class="pip-face" aria-hidden="true"><span class="ear l"></span><span class="ear r"></span><span class="nose"></span></div>
+          <p id="pipLine" aria-live="polite"><span class="who">Pip:</span> <span id="pipText">Loading the raid…</span></p>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Your raider" style="margin-top:14px">
+        <h2>Your Raider</h2>
+        <dl class="kv">
+          <dt>Level</dt><dd id="kvLevel">1</dd>
+          <dt>Energy cap</dt><dd id="kvCap">10</dd>
+          <dt>Base damage</dt><dd id="kvDmg">10</dd>
+          <dt>XP</dt><dd id="kvXp">0</dd>
+        </dl>
+        <div class="xpbar" aria-hidden="true"><div class="xpfill" id="xpFill"></div></div>
+
+        <h3>Lifetime stats</h3>
+        <dl class="kv">
+          <dt>Attacks</dt><dd id="kvAttacks">0</dd>
+          <dt>Perfect strikes</dt><dd id="kvPerfects">0</dd>
+          <dt>Your damage</dt><dd id="kvPlayerDmg">0</dd>
+          <dt>Squeektoshi damage</dt><dd id="kvHamDmg">0</dd>
+          <dt>Bosses beaten</dt><dd id="kvBosses">0</dd>
+        </dl>
+
+        <h3>Badges</h3>
+        <div class="badges" id="badgeRow"></div>
+
+        <h3>Save data</h3>
+        <div class="rowbtns">
+          <button id="exportBtn" aria-label="Export your save as a JSON file">Export save</button>
+          <button id="importBtn" aria-label="Import a save from a JSON file">Import save</button>
+          <input type="file" id="importFile" accept="application/json,.json" class="sr" aria-label="Choose a save file to import">
+          <button id="resetBtn" aria-label="Reset all progress">Reset</button>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Raid log" style="margin-top:14px">
+        <h2>Raid Log</h2>
+        <ul class="log" id="raidLog"></ul>
+      </section>
+    </div>
+  </div>
+
+  <footer>
+    <div class="rules">
+      <strong>How it works:</strong> SQUEEK RAID reads Squeekchain's public live API. Your attacks are a timing game; your Energy refills from the real distance Squeektoshi runs; and every time a round settles on-chain, Squeektoshi himself smacks the boss for damage based on the work in that settlement.
+      <br><strong>Rules:</strong> points only — no wallet connection, no transactions, no money, no betting. Progress lives in your browser's local storage only; nothing is tracked or sent anywhere.
+    </div>
+    <p>SQUEEK RAID — a Squeekchain Genesis game by kingklowor ·
+      <a href="https://squeekchain.com/genesis">Squeekchain Genesis</a> ·
+      <a href="https://sepolia.squeekchain.com/status">Squeekchain live status</a>
+      <br>Fan-made community game. Testnet only. Not affiliated with Squeekchain.</p>
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   SQUEEK RAID — a boss raid powered by a real hamster.
+   Single file. No backend. No wallet. No tracking.
+   Live data: https://api.squeekchain.com (public, CORS-enabled)
+   ============================================================ */
+
+var API_STATUS = "https://api.squeekchain.com/v1/status";
+var API_SETTLE = "https://api.squeekchain.com/v1/settlements?range=24h";
+var STATUS_MS = 10000;
+var SETTLE_MS = 60000;
+var METERS_PER_ENERGY = 25;      /* metres of real wheel distance per +1 energy */
+var ROUND_SECONDS = 600;
+var SAVE_KEY = "squeekraid_save_v1";
+
+/* ---------------- boss roster ---------------- */
+var BOSSES = [
+  { name: "Baron von Broccoli",       title: "Veggie menace. Demands you eat your greens.",        hp: 600,  c1: "#b5e48c", c2: "#5da23a", crown: false },
+  { name: "The Dust Bunny King",      title: "Ruler of everything under the sofa.",                hp: 900,  c1: "#d9d4e8", c2: "#7d7390", crown: true  },
+  { name: "Sir Snoozington, the Nap Cat", title: "Has slept through three alarms and one raid.",   hp: 1400, c1: "#ffd9a0", c2: "#c97b2d", crown: false },
+  { name: "VAK-9000 the Vacuum Menace",   title: "It knows where the seed stash is buried.",       hp: 2100, c1: "#cfd8dc", c2: "#5f737d", crown: false },
+  { name: "The Fridge Raider",        title: "Final boss of the midnight snack.",                  hp: 3200, c1: "#a8d8ff", c2: "#3a6ea8", crown: true  }
+];
+
+var BADGES = [
+  { id: "first-blood",  label: "First Blood",        test: function(s){ return s.stats.attacks >= 1; } },
+  { id: "sharpshooter", label: "Sharpshooter ×10",   test: function(s){ return s.stats.perfects >= 10; } },
+  { id: "boss-slayer",  label: "Boss Slayer",        test: function(s){ return s.stats.bossesBeaten >= 1; } },
+  { id: "full-house",   label: "Full Roster",        test: function(s){ return s.stats.bossesBeaten >= BOSSES.length; } },
+  { id: "wheel-friend", label: "Wheel's Best Friend",test: function(s){ return s.stats.hamsterDamage >= 1000; } },
+  { id: "veteran",      label: "Raid Veteran Lv 5",  test: function(s){ return s.level >= 5; } },
+  { id: "big-hitter",   label: "10,000 Damage Club", test: function(s){ return s.stats.playerDamage >= 10000; } }
+];
+
+/* ---------------- save state ---------------- */
+function defaultState(){
+  return {
+    v: 1,
+    bossIndex: 0,
+    bossCycle: 0,
+    bossHp: BOSSES[0].hp,
+    weekKey: null,
+    energy: 10,
+    energyAcc: 0,
+    xp: 0,
+    level: 1,
+    stats: { attacks: 0, perfects: 0, playerDamage: 0, hamsterDamage: 0, bossesBeaten: 0 },
+    badges: [],
+    focusReadyAt: 0,
+    lastSeen: 0,
+    lastDistanceMm: null,
+    lastSettled: null,
+    sessionHamDamage: 0,
+    totalVisits: 0
+  };
+}
+var S = defaultState();
+function save(){
+  S.lastSeen = Date.now();
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch(e){}
+}
+function load(){
+  try {
+    var raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    var d = JSON.parse(raw);
+    if (!d || typeof d !== "object" || !d.stats) return false;
+    var base = defaultState();
+    for (var k in base) { if (d[k] !== undefined) base[k] = d[k]; }
+    S = base;
+    return true;
+  } catch(e){ return false; }
+}
+
+/* ---------------- helpers ---------------- */
+function $(id){ return document.getElementById(id); }
+function num(x, fallback){
+  var n = (typeof x === "string") ? parseFloat(x) : (typeof x === "number" ? x : NaN);
+  return isFinite(n) ? n : (fallback || 0);
+}
+function fmt(n){ return Math.round(n).toLocaleString("en-US"); }
+function nowSec(){ return Date.now() / 1000; }
+function isoWeekKey(d){
+  var date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  var dayNum = (date.getUTCDay() + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - dayNum + 3);
+  var firstThursday = new Date(Date.UTC(date.getUTCFullYear(), 0, 4));
+  var fday = (firstThursday.getUTCDay() + 6) % 7;
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - fday + 3);
+  var week = 1 + Math.round((date - firstThursday) / (7 * 24 * 3600 * 1000));
+  return date.getUTCFullYear() + "-W" + ("0" + week).slice(-2);
+}
+function bossMaxHp(){
+  var b = BOSSES[S.bossIndex];
+  return Math.round(b.hp * (1 + 0.5 * S.bossCycle));
+}
+function energyCap(){ return 10 + 2 * (S.level - 1); }
+function baseDamage(){ return 10 + 3 * (S.level - 1); }
+function xpForNext(level){ return 100 * level; }
+
+/* ---------------- live data ---------------- */
+var live = {
+  ok: false,
+  lastOkAt: 0,
+  running: false,
+  rpm: 0,
+  speedMmS: 0,
+  distanceMm: 0,
+  settledThrough: 0,
+  blockHeight: 0,
+  nextSettleAt: 0
+};
+
+function fetchJson(url){
+  return fetch(url, { cache: "no-store" }).then(function(r){
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  });
+}
+
+function applyStatus(d){
+  if (!d || typeof d !== "object") return;
+  var m = d.measurement || {};
+  var anchor = (d.builder && d.builder.anchor) || {};
+  var rpm = num(m.rpmMilli) / 1000;
+  var speed = num(m.speedMmPerSecond);
+  var dist = num(m.distanceMm, live.distanceMm);
+  /* CORRECTNESS RULE: never trust coreStatus alone.
+     The hamster is RUNNING iff rpm > 0 OR speed > 0. */
+  live.running = (num(m.rpmMilli) > 0) || (speed > 0);
+  live.rpm = rpm;
+  live.speedMmS = speed;
+  live.ok = true;
+  live.lastOkAt = Date.now();
+  if (anchor.settledThroughRound !== undefined) live.settledThrough = num(anchor.settledThroughRound, live.settledThrough);
+  if (anchor.blockHeight !== undefined) live.blockHeight = num(anchor.blockHeight, live.blockHeight);
+
+  /* Energy from real distance gained while playing */
+  if (S.lastDistanceMm !== null && dist > S.lastDistanceMm) {
+    var gainedMeters = (dist - S.lastDistanceMm) / 1000;
+    S.energyAcc += gainedMeters / METERS_PER_ENERGY;
+    var whole = Math.floor(S.energyAcc);
+    if (whole > 0) {
+      var before = S.energy;
+      S.energy = Math.min(energyCap(), S.energy + whole);
+      S.energyAcc -= whole;
+      if (S.energy <= before) S.energyAcc = Math.min(S.energyAcc, 0.99); /* cap banked fraction while full */
+      if (S.energy > before) pipEvent("energy");
+    }
+  }
+  if (dist > 0) S.lastDistanceMm = dist;
+  live.distanceMm = dist;
+  save();
+  renderLive();
+}
+
+function applySettlements(d){
+  if (!d || !Array.isArray(d.recentSettlements)) return;
+  var list = d.recentSettlements.slice().sort(function(a,b){
+    return num(a.settledThroughRound) - num(b.settledThroughRound);
+  });
+  if (!list.length) return;
+
+  /* countdown estimate from the newest settlement timestamp */
+  var newest = list[list.length - 1];
+  var ts = num(newest.blockTimestamp);
+  if (ts > 0) {
+    if (ts > 1e12) ts = ts / 1000;               /* ms → s */
+    live.nextSettleAt = ts + ROUND_SECONDS;
+  }
+
+  var maxSettled = num(newest.settledThroughRound);
+  if (S.lastSettled === null) {           /* first sight: set baseline, no retro damage */
+    S.lastSettled = maxSettled;
+    save();
+    return;
+  }
+  var totalWork = 0, roundsCovered = [], txHash = "";
+  list.forEach(function(b){
+    var through = num(b.settledThroughRound);
+    if (through > S.lastSettled) {
+      totalWork += num(b.workAdded);
+      var from = num(b.previousSettledThroughRound) + 1;
+      roundsCovered.push(from === through ? ("#" + through) : ("#" + from + "–#" + through));
+      if (b.transactionHash) txHash = b.transactionHash;
+    }
+  });
+  if (totalWork > 0) {
+    var dmg = Math.round(totalWork * 2);
+    S.lastSettled = maxSettled;
+    S.stats.hamsterDamage += dmg;
+    S.sessionHamDamage += dmg;
+    addLog("hamster", "Squeektoshi dealt <b>" + fmt(dmg) + "</b> raid damage from settled round(s) " +
+      roundsCovered.join(", ") + " (" + fmt(totalWork) + " wheel passes × 2)." +
+      (txHash ? ' <a href="https://sepolia.etherscan.io/tx/' + txHash + '" target="_blank" rel="noopener">Settlement tx</a>' : ""));
+    floater(dmg, "hamster", "Squeektoshi +" + fmt(dmg));
+    damageBoss(dmg, true);
+    pipEvent("hamsterHit");
+    checkBadges();
+    save();
+    renderAll();
+  } else if (maxSettled > S.lastSettled) {
+    S.lastSettled = maxSettled;
+    save();
+  }
+}
+
+function pollStatus(){
+  fetchJson(API_STATUS).then(applyStatus).catch(function(){ renderLive(); });
+}
+function pollSettlements(){
+  fetchJson(API_SETTLE).then(applySettlements).catch(function(){});
+}
+
+/* ---------------- combat ---------------- */
+var marker = { pos: 0, dir: 1, speed: 95 };  /* % per second */
+var lastFrame = 0;
+
+function perfectHalfWidth(){ return live.running ? 7 : 4; }
+function goodHalfWidth(){ return 16; }
+
+function layoutZones(){
+  var p = perfectHalfWidth(), g = goodHalfWidth();
+  var zp = $("zonePerfect"), zg = $("zoneGood");
+  zp.style.left = (50 - p) + "%"; zp.style.width = (2 * p) + "%";
+  zg.style.left = (50 - g) + "%"; zg.style.width = (2 * g) + "%";
+}
+
+function frameLoop(t){
+  if (!lastFrame) lastFrame = t;
+  var dt = Math.min(0.05, (t - lastFrame) / 1000);
+  lastFrame = t;
+  marker.pos += marker.dir * marker.speed * dt;
+  if (marker.pos >= 100) { marker.pos = 100; marker.dir = -1; }
+  if (marker.pos <= 0)   { marker.pos = 0;   marker.dir = 1; }
+  $("marker").style.left = marker.pos + "%";
+  drawWheel(dt);
+  requestAnimationFrame(frameLoop);
+}
+
+function attack(){
+  if (S.bossHp <= 0) return;
+  if (S.energy < 1) {
+    pipSay(pick([
+      "Out of energy! The wheel earns more — or hit Focus and catch your breath.",
+      "No energy, no swing. Watch the wheel: every 25 m is another strike.",
+      "Empty tank! Squeektoshi is literally doing cardio so you can fight. Give it a second."
+    ]));
+    shake();
+    return;
+  }
+  S.energy -= 1;
+  S.stats.attacks += 1;
+  var dist = Math.abs(marker.pos - 50);
+  var p = perfectHalfWidth(), g = goodHalfWidth();
+  var dmg, kind, label;
+  if (dist <= p) {
+    kind = "perfect";
+    var mega = live.running && Math.random() < 0.5;
+    dmg = Math.round(baseDamage() * (mega ? 5 : 3));
+    label = mega ? "MEGA CRIT " : "PERFECT ";
+    S.stats.perfects += 1;
+    shake();
+  } else if (dist <= g) {
+    kind = "good"; dmg = baseDamage(); label = "";
+  } else {
+    kind = "weak"; dmg = Math.max(1, Math.round(baseDamage() * 0.4)); label = "";
+  }
+  S.stats.playerDamage += dmg;
+  gainXp(dmg);
+  floater(dmg, kind, label + fmt(dmg));
+  damageBoss(dmg, false);
+  if (kind === "perfect") pipEvent("perfect");
+  else if (kind === "weak") pipEvent("weak");
+  checkBadges();
+  save();
+  renderAll();
+}
+
+function damageBoss(dmg, fromHamster){
+  if (S.bossHp <= 0) return;
+  S.bossHp = Math.max(0, S.bossHp - dmg);
+  if (S.bossHp <= 0) defeatBoss(fromHamster);
+}
+
+function defeatBoss(fromHamster){
+  var b = BOSSES[S.bossIndex];
+  S.stats.bossesBeaten += 1;
+  addLog("boss", "<b>" + b.name + "</b> has been defeated!" +
+    (fromHamster ? " Squeektoshi landed the finishing blow." : " You landed the finishing blow.") +
+    " Badge earned, next boss incoming.");
+  pipSay("Down! " + b.name + " is DONE. " +
+    (fromHamster ? "And the hamster got the last hit in. Show-off." : "Beautiful work, raider.") +
+    " Next boss rolls in… now.");
+  S.bossIndex += 1;
+  if (S.bossIndex >= BOSSES.length) { S.bossIndex = 0; S.bossCycle += 1; }
+  S.bossHp = bossMaxHp();
+  checkBadges();
+}
+
+function gainXp(amount){
+  S.xp += amount;
+  var need = xpForNext(S.level);
+  while (S.xp >= need) {
+    S.xp -= need;
+    S.level += 1;
+    S.energy = energyCap();
+    addLog("level", "Level up! You are now level <b>" + S.level + "</b>. Energy cap " + energyCap() +
+      ", base damage " + baseDamage() + ", energy refilled.");
+    pipSay("Level " + S.level + "! Bigger energy tank, heavier hits. The bosses are nervous. They should be.");
+    need = xpForNext(S.level);
+  }
+}
+
+function focus(){
+  var now = Date.now();
+  if (now < S.focusReadyAt) return;
+  if (S.energy >= energyCap()) { pipSay("Energy's full already. Go spend it on a boss!"); return; }
+  S.energy += 1;
+  S.focusReadyAt = now + 20000;
+  pipEvent("focus");
+  save();
+  renderAll();
+}
+
+/* ---------------- badges ---------------- */
+function checkBadges(){
+  BADGES.forEach(function(b){
+    if (S.badges.indexOf(b.id) === -1 && b.test(S)) {
+      S.badges.push(b.id);
+      addLog("badge", "Badge earned: <b>" + b.label + "</b>.");
+    }
+  });
+}
+
+/* ---------------- Pip, the sidekick with a memory ---------------- */
+var pipTimer = 0;
+function pipSay(text){
+  $("pipText").textContent = text;
+  pipTimer = Date.now();
+}
+function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+function pipContextLine(){
+  var b = BOSSES[S.bossIndex];
+  var hpFrac = S.bossHp / bossMaxHp();
+  if (live.ok && live.running) return pick([
+    "Hear that? That's the wheel at " + live.rpm.toFixed(1) + " RPM. Squeektoshi is FEELING it. Your Perfect window is fat right now.",
+    "He's running! Every metre he covers is energy in your pocket. 25 metres a strike — do the maths, then do the violence.",
+    "Live wheel, live buffs. This is the part where we look extremely professional."
+  ]);
+  if (live.ok && !live.running) return pick([
+    "He's napping. Again. Honestly? Respect. Even legends schedule their rest days.",
+    "Wheel's still. Energy's paused, but Focus keeps us in the fight. Twenty seconds a sip.",
+    "Shhh. Squeektoshi is recharging. Champions nap. Bosses, however, should not get comfortable."
+  ]);
+  if (hpFrac < 0.15) return pick([
+    b.name + " is wobbling! One or two clean hits — finish this!",
+    "So close! I can see the boss sweating. Or… condensing. Whatever — HIT IT."
+  ]);
+  if (S.stats.bossesBeaten > 0) return pick([
+    "You've flattened " + S.stats.bossesBeaten + " boss" + (S.stats.bossesBeaten === 1 ? "" : "es") + " with me. We have a whole trophy shelf now. It's a small shelf. But it's ours.",
+    "Career damage report: you " + fmt(S.stats.playerDamage) + ", the hamster " + fmt(S.stats.hamsterDamage) + ". Teamwork makes the raid work."
+  ]);
+  return pick([
+    "Welcome to the raid. I'm Pip — logistics, morale, and dramatic gasping.",
+    "The bar at the bottom? White line stops in the gold — that's a Perfect. Everything else is foreplay.",
+    "Fun fact: Squeektoshi has no idea he's in a boss fight. He's just a hamster doing hamster things. Iconic."
+  ]);
+}
+
+function pipEvent(kind){
+  if (kind === "perfect") pipSay(pick([
+    "PERFECT! Right in the gold. I felt that in my whiskers.",
+    "Textbook! Frame-perfect. The boss is reconsidering its life choices.",
+    "Ooh, clean! Do it again. And again. Forever, ideally."
+  ]));
+  else if (kind === "weak") pipSay(pick([
+    "A graze. The boss sends its regards and a small bruise.",
+    "Edge hit. Counts! Barely. Aim for the shiny bit next time.",
+    "That was… a warm-up swing. Yes. Let's call it that."
+  ]));
+  else if (kind === "hamsterHit") pipSay(pick([
+    "The hamster just hit the boss FOR you. Settled rounds are no joke.",
+    "Squeektoshi damage, straight from the chain. He doesn't even know. Legend.",
+    "See that blue number? That's the wheel fighting back."
+  ]));
+  else if (kind === "energy") pipSay(pick([
+    "Energy up! The wheel provides.",
+    "25 metres well spent. One more swing in the tank."
+  ]));
+  else if (kind === "focus") pipSay(pick([
+    "Deep breath. Focus sipped. Back to work.",
+    "Mind over matter. Mostly over the boss's face, shortly."
+  ]));
+}
+
+function pipRotate(){
+  if (Date.now() - pipTimer > 9000) pipSay(pipContextLine());
+}
+
+/* ---------------- raid log ---------------- */
+var logEntries = [];
+function addLog(kind, html){
+  logEntries.unshift({ t: new Date(), kind: kind, html: html });
+  if (logEntries.length > 30) logEntries.pop();
+  renderLog();
+}
+function renderLog(){
+  var ul = $("raidLog");
+  ul.innerHTML = logEntries.map(function(e){
+    var time = e.t.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    return '<li><span class="t">' + time + '</span> · <span class="' +
+      (e.kind === "hamster" ? "ham" : "") + '">' + e.html + "</span></li>";
+  }).join("");
+}
+
+/* ---------------- floaters & shake ---------------- */
+function floater(dmg, kind, text){
+  var el = document.createElement("div");
+  el.className = "floater " + kind;
+  el.textContent = (kind === "hamster" ? "" : "-") + (text || fmt(dmg));
+  if (kind === "hamster") el.textContent = text || ("-" + fmt(dmg));
+  el.style.left = (38 + Math.random() * 24) + "%";
+  $("arena").appendChild(el);
+  setTimeout(function(){ el.remove(); }, 1000);
+}
+function shake(){
+  document.body.classList.remove("shake");
+  void document.body.offsetWidth;
+  document.body.classList.add("shake");
+  setTimeout(function(){ document.body.classList.remove("shake"); }, 340);
+}
+
+/* ---------------- wheel canvas ---------------- */
+var wheelAngle = 0, zPhase = 0;
+function drawWheel(dt){
+  var cv = $("wheelCanvas");
+  var ctx = cv.getContext("2d");
+  var W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+
+  /* backdrop */
+  ctx.fillStyle = "#1a140e";
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#241a10";
+  ctx.fillRect(0, H - 44, W, 44);
+  ctx.fillStyle = "#31241a";
+  for (var i = 0; i < W; i += 26) ctx.fillRect(i, H - 44, 3, 44);
+
+  var cx = W / 2, cy = H / 2 - 8, R = 108;
+  var spin = live.running ? (live.rpm * Math.PI * 2 / 60) : 0;
+  wheelAngle += spin * dt;
+
+  /* stand */
+  ctx.strokeStyle = "#5a4630"; ctx.lineWidth = 10;
+  ctx.beginPath(); ctx.moveTo(cx - 70, H - 40); ctx.lineTo(cx, cy + 30); ctx.lineTo(cx + 70, H - 40); ctx.stroke();
+
+  /* wheel rim */
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(wheelAngle);
+  ctx.strokeStyle = "#f5a623"; ctx.lineWidth = 11;
+  ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = "#c47f10"; ctx.lineWidth = 5;
+  for (var s = 0; s < 8; s++) {
+    var a = s * Math.PI / 4;
+    ctx.beginPath(); ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(a) * R, Math.sin(a) * R); ctx.stroke();
+  }
+  ctx.restore();
+  ctx.fillStyle = "#ffcf6e";
+  ctx.beginPath(); ctx.arc(cx, cy, 13, 0, Math.PI * 2); ctx.fill();
+
+  drawHamster(ctx, cx, cy, R);
+}
+
+function px(ctx, x, y, w, h, color){ ctx.fillStyle = color; ctx.fillRect(x, y, w, h); }
+
+function drawHamster(ctx, cx, cy, R){
+  /* pixel hamster riding the bottom-inside of the wheel */
+  var run = live.running;
+  var bob = run ? Math.abs(Math.sin(wheelAngle * 3)) * 7 : 0;
+  var bx = cx - 34, by = cy + R - 62 - bob;
+  var fur = "#e8b06a", furD = "#c98d45", cream = "#ffedc9", pink = "#e88ca0", dark = "#14100c";
+
+  if (run) {
+    /* body */
+    px(ctx, bx, by + 14, 68, 34, fur);
+    px(ctx, bx + 6, by + 8, 56, 12, fur);
+    /* head */
+    px(ctx, bx + 44, by, 30, 28, fur);
+    px(ctx, bx + 62, by + 12, 14, 10, cream);        /* snout */
+    px(ctx, bx + 70, by + 14, 5, 5, pink);           /* nose */
+    px(ctx, bx + 52, by + 8, 6, 8, dark);            /* eye */
+    px(ctx, bx + 44, by - 8, 14, 12, furD);          /* ear */
+    px(ctx, bx + 47, by - 5, 8, 6, pink);
+    /* cheek pouch */
+    px(ctx, bx + 50, by + 20, 14, 10, cream);
+    /* legs (running) */
+    var lp = Math.sin(wheelAngle * 6) > 0 ? 0 : 8;
+    px(ctx, bx + 8, by + 46, 14, 10, furD);
+    px(ctx, bx + 40 + lp, by + 46, 14, 10, furD);
+    /* tail */
+    px(ctx, bx - 6, by + 26, 10, 8, cream);
+  } else {
+    /* curled up asleep */
+    px(ctx, bx + 2, by + 22, 64, 26, fur);
+    px(ctx, bx + 10, by + 14, 48, 14, fur);
+    px(ctx, bx + 44, by + 8, 26, 22, fur);           /* head tucked */
+    px(ctx, bx + 46, by + 2, 12, 10, furD);          /* ear */
+    px(ctx, bx + 52, by + 18, 10, 3, dark);          /* closed eye */
+    px(ctx, bx + 64, by + 24, 6, 4, pink);           /* nose */
+    /* floating Zzz */
+    zPhase += 0.016;
+    ctx.fillStyle = "#a9c8e8";
+    ctx.font = "bold 17px system-ui, sans-serif";
+    for (var i = 0; i < 3; i++) {
+      var off = (zPhase + i * 0.33) % 1;
+      ctx.globalAlpha = 1 - off;
+      ctx.fillText("Z", bx + 74 + off * 16, by + 6 - off * 44);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+/* ---------------- rendering ---------------- */
+function renderLive(){
+  var fresh = live.ok && (Date.now() - live.lastOkAt < STATUS_MS * 2.5);
+  var dot = $("liveDot"), txt = $("liveText");
+  if (fresh) {
+    dot.className = "dot live";
+    txt.textContent = live.running ? "LIVE — Squeektoshi is running" : "LIVE — wheel connected, hamster resting";
+  } else if (live.ok) {
+    dot.className = "dot stale";
+    txt.textContent = "STALE — connection lost, showing last known data";
+  } else {
+    dot.className = "dot stale";
+    txt.textContent = "OFFLINE — cannot reach the wheel, retrying";
+  }
+  document.body.classList.toggle("buffed", fresh && live.running);
+  document.body.classList.toggle("napping", fresh && !live.running && live.ok);
+
+  $("stDistance").innerHTML = live.ok ? (live.distanceMm / 1e6).toFixed(3) + " <small>km</small>" : "—";
+  $("stSpeed").innerHTML = live.ok ? (live.speedMmS * 0.0036).toFixed(2) + " <small>km/h</small>" : "—";
+  $("stRpm").textContent = live.ok ? live.rpm.toFixed(1) : "—";
+  $("stRound").textContent = live.ok ? ("#" + (live.settledThrough + 1)) : "—";
+  $("stHamDamage").textContent = fmt(S.sessionHamDamage);
+  layoutZones();
+}
+
+function renderCountdown(){
+  if (!live.nextSettleAt) { $("stCountdown").textContent = "—"; return; }
+  var left = Math.max(0, Math.round(live.nextSettleAt - nowSec()));
+  var m = Math.floor(left / 60), s = left % 60;
+  $("stCountdown").textContent = m + ":" + ("0" + s).slice(-2);
+}
+
+function renderAll(){
+  var b = BOSSES[S.bossIndex];
+  var max = bossMaxHp();
+  $("bossName").textContent = b.name;
+  $("bossTitle").textContent = b.title;
+  $("bossMeta").textContent = "Boss " + (S.bossIndex + 1) + " of " + BOSSES.length +
+    (S.bossCycle > 0 ? " · Cycle " + (S.bossCycle + 1) + " (tougher)" : "") +
+    " · Bosses beaten: " + S.stats.bossesBeaten;
+  var art = $("bossArt");
+  art.style.setProperty("--bosslight", b.c1);
+  art.style.setProperty("--boss", b.c2);
+  art.style.background = "radial-gradient(circle at 35% 30%, " + b.c1 + ", " + b.c2 + " 70%)";
+  $("bossCrown").style.display = b.crown ? "block" : "none";
+  $("hpText").innerHTML = "<b>" + fmt(Math.max(0, S.bossHp)) + "</b> / " + fmt(max);
+  var pct = Math.max(0, Math.min(100, S.bossHp / max * 100));
+  $("hpFill").style.width = pct + "%";
+  $("hpBar").setAttribute("aria-valuenow", Math.round(pct));
+  $("hpBar").setAttribute("aria-valuemax", max);
+
+  var cap = energyCap();
+  $("energyText").innerHTML = "Energy <b>" + S.energy + "</b> / " + cap +
+    " &nbsp;·&nbsp; next +1 in ~" + Math.max(0, Math.ceil((1 - S.energyAcc) * METERS_PER_ENERGY)) + " m of wheel";
+  var pips = "";
+  for (var i = 0; i < cap; i++) pips += '<span class="pip' + (i < S.energy ? " on" : "") + '"></span>';
+  $("energyPips").innerHTML = pips;
+
+  var fb = $("focusBtn");
+  var cd = Math.ceil((S.focusReadyAt - Date.now()) / 1000);
+  if (cd > 0) { fb.disabled = true; fb.textContent = "Focus (" + cd + "s)"; }
+  else { fb.disabled = false; fb.textContent = "Focus +1"; }
+  $("attackBtn").disabled = S.bossHp <= 0;
+
+  $("kvLevel").textContent = S.level;
+  $("kvCap").textContent = cap;
+  $("kvDmg").textContent = baseDamage();
+  $("kvXp").textContent = fmt(S.xp) + " / " + fmt(xpForNext(S.level));
+  $("xpFill").style.width = Math.min(100, S.xp / xpForNext(S.level) * 100) + "%";
+  $("kvAttacks").textContent = fmt(S.stats.attacks);
+  $("kvPerfects").textContent = fmt(S.stats.perfects);
+  $("kvPlayerDmg").textContent = fmt(S.stats.playerDamage);
+  $("kvHamDmg").textContent = fmt(S.stats.hamsterDamage);
+  $("kvBosses").textContent = fmt(S.stats.bossesBeaten);
+  $("stHamDamage").textContent = fmt(S.sessionHamDamage);
+
+  $("badgeRow").innerHTML = BADGES.map(function(bd){
+    var earned = S.badges.indexOf(bd.id) !== -1;
+    return '<span class="badge' + (earned ? " earned" : "") + '">' + (earned ? "★ " : "") + bd.label + "</span>";
+  }).join("");
+}
+
+/* ---------------- export / import / reset ---------------- */
+function exportSave(){
+  var blob = new Blob([JSON.stringify(S, null, 2)], { type: "application/json" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "squeek-raid-save.json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  pipSay("Save exported. Guard it with your life. Or, you know, a folder.");
+}
+function importSaveFile(file){
+  var reader = new FileReader();
+  reader.onload = function(){
+    try {
+      var d = JSON.parse(reader.result);
+      if (!d || typeof d !== "object" || !d.stats || typeof d.bossHp !== "number") throw new Error("bad save");
+      var base = defaultState();
+      for (var k in base) { if (d[k] !== undefined) base[k] = d[k]; }
+      S = base;
+      if (S.bossIndex < 0 || S.bossIndex >= BOSSES.length) S.bossIndex = 0;
+      if (S.bossHp <= 0 || S.bossHp > bossMaxHp()) S.bossHp = bossMaxHp();
+      S.energy = Math.min(S.energy, energyCap());
+      save();
+      renderAll();
+      addLog("save", "Save imported. Welcome back, raider.");
+      pipSay("Save loaded! Pip remembers everything. Pip remembers EVERYTHING.");
+    } catch(e) {
+      pipSay("That file isn't a SQUEEK RAID save. My disappointment is immeasurable.");
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------------- weekly rotation ---------------- */
+function applyWeeklyRotation(){
+  var key = isoWeekKey(new Date());
+  if (S.weekKey === null) { S.weekKey = key; return; }
+  if (S.weekKey !== key) {
+    S.weekKey = key;
+    S.bossIndex = (S.bossIndex + 1) % BOSSES.length;
+    S.bossHp = bossMaxHp();
+    addLog("boss", "A new week dawns on Squeekchain, and a new boss rotates in: <b>" + BOSSES[S.bossIndex].name + "</b>.");
+    pipSay("New week, new boss! " + BOSSES[S.bossIndex].name + " has entered the arena. Try to look surprised.");
+  }
+}
+
+/* ---------------- boot ---------------- */
+function boot(){
+  var hadSave = load();
+  var awayMs = hadSave && S.lastSeen ? (Date.now() - S.lastSeen) : 0;
+  S.totalVisits += 1;
+  applyWeeklyRotation();
+  if (S.bossHp <= 0) S.bossHp = bossMaxHp();
+  if (S.bossHp > bossMaxHp()) S.bossHp = bossMaxHp();
+  checkBadges();
+  save();
+
+  $("attackBtn").addEventListener("click", attack);
+  $("focusBtn").addEventListener("click", focus);
+  $("exportBtn").addEventListener("click", exportSave);
+  $("importBtn").addEventListener("click", function(){ $("importFile").click(); });
+  $("importFile").addEventListener("change", function(ev){
+    if (ev.target.files && ev.target.files[0]) importSaveFile(ev.target.files[0]);
+    ev.target.value = "";
+  });
+  $("resetBtn").addEventListener("click", function(){
+    if (confirm("Reset ALL SQUEEK RAID progress? Bosses, levels, badges — everything?")) {
+      try { localStorage.removeItem(SAVE_KEY); } catch(e){}
+      S = defaultState();
+      S.weekKey = isoWeekKey(new Date());
+      logEntries = [];
+      save();
+      renderAll();
+      addLog("save", "Progress reset. A fresh raid begins.");
+      pipSay("Clean slate! New raid, new glory, same hamster.");
+    }
+  });
+  document.addEventListener("keydown", function(ev){
+    if (ev.code === "Space" && !ev.repeat && ev.target.tagName !== "INPUT" && ev.target.tagName !== "TEXTAREA") {
+      ev.preventDefault();
+      attack();
+    }
+  });
+
+  renderAll();
+  renderLive();
+  layoutZones();
+
+  if (!hadSave || S.totalVisits <= 1) {
+    pipSay("First raid? Perfect. I'm Pip. The hamster up top is Squeektoshi — real wheel, real running, real damage. Time your strikes in the gold, and let's flatten some bosses.");
+    addLog("start", "Welcome to SQUEEK RAID. Your first boss: <b>" + BOSSES[S.bossIndex].name + "</b>.");
+  } else if (awayMs > 24 * 3600 * 1000) {
+    var days = Math.floor(awayMs / (24 * 3600 * 1000));
+    pipSay("You're back! " + days + " day" + (days === 1 ? "" : "s") + " away — the bosses held a little party. Rude. " +
+      "You've beaten " + S.stats.bossesBeaten + " of them so far; " + BOSSES[S.bossIndex].name + " is still waiting.");
+    addLog("start", "Welcome back after " + days + "d away. Boss progress kept: <b>" + BOSSES[S.bossIndex].name + "</b> at " + fmt(S.bossHp) + " HP.");
+  } else {
+    pipSay(pick([
+      "Back again! " + BOSSES[S.bossIndex].name + " is at " + fmt(S.bossHp) + " HP. We left a dent; let's finish the job.",
+      "Raider returns! Career totals: " + fmt(S.stats.playerDamage) + " damage by you, " + fmt(S.stats.hamsterDamage) + " by the hamster. Solid duo."
+    ]));
+    addLog("start", "Raid resumed. Current boss: <b>" + BOSSES[S.bossIndex].name + "</b> at " + fmt(S.bossHp) + " HP.");
+  }
+
+  pollStatus();
+  pollSettlements();
+  setInterval(pollStatus, STATUS_MS);
+  setInterval(pollSettlements, SETTLE_MS);
+  setInterval(renderCountdown, 500);
+  setInterval(pipRotate, 4000);
+  setInterval(renderAll, 1000);           /* keeps Focus cooldown + energy pips fresh */
+  requestAnimationFrame(frameLoop);
+}
+
+document.addEventListener("DOMContentLoaded", boot);
+</script>
+</body>
+</html>
