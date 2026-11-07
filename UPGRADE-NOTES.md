@@ -178,3 +178,52 @@ CRITIQUE-V2.md together with the fix mapping — this repo shows its working.
 - Settlement countdown is an estimate from the newest settlement timestamp + 600 s,
   as in v1; the API publishes no exact next-settlement time.
 - No backend means no cross-device sync and no global leaderboard — by design.
+
+---
+
+# v3 — SQUEEK WORKS (2026-11-07, later that night)
+
+## What was scrapped, and why
+
+The owner played v2 (SQUEEK RAID) on his phone and rejected it in his own words:
+
+> "Keliatan low effort banget anjir konsepnya ganti jangan kek gitu konsepnya"
+> ("The concept looks seriously low-effort, change it, not like that.")
+
+He was right. v2's depth was decoration on a clicker skeleton: five HP-sponge bosses, one timing bar, and chain data wired as bonus meters (distance = energy refills for more clicking; settlements = a spectator damage event). No amount of boss mechanics fixes a concept whose core verb is "click at the right moment". So v3 scraps the raid entirely — bosses, timing combat, Surge, companions-as-combat-buffs, Wheel Pass, boss memory: all gone. What survived is only the honest plumbing that was genuinely about Squeekchain: the live API reads, the RUNNING derivation (rpm/speed, never coreStatus), the no-retro-credit baseline rule, the epoch guard, and the reviewer proof panel.
+
+## The new design
+
+**SQUEEK WORKS** — a workshop tycoon / production-chain management sim where the chain data is the factory's power plant:
+
+- **Live power grid.** Available watts = speedMmPerSecond × 0.08 + rpm × 3, recomputed every poll. Machines draw real watts; oversubscription throttles every line by priority weight. The factory literally cannot outrun the hamster.
+- **Witnessed-distance battery.** Stored Wh grows only from distance deltas after the session's first read (baseline rule + counter-epoch guard, same discipline as v2). Machines burn Wh as they work; an empty battery stops the floor under a spinning wheel.
+- **Production chains.** Seeds → Mill → Flour → Oven → Bread; Seeds → Press → Oil; Bread + Oil → Packer → Crates. Starvation (no inputs), output buffers, capped stores that jam machines and back the chain up. Recipes unlock by building the prerequisite machine, not by prestige tiers.
+- **Power as a hard choice.** Per red-team demand: alongside priority sliders, every machine has an ON / IDLE / OFF circuit breaker (IDLE = 10% draw, 25–40% creep). When the wheel slows, the player decides which line lives.
+- **Settlement orders.** Each witnessed settlement spawns an order sized from its real workAdded (1–6 crates), due in 3 settlements, paid in Cogs + Reputation, with the source tx linked. Settlements also deliver the seed supply. Missed orders cost reputation.
+- **Real-data events.** Surge (rpm > 1.6× recent average) = Overheat: −30% efficiency for 60 s; venting costs 15 Wh and only halves the penalty, so riding it out is a genuine alternative. Idle wheel = Night Shift: construction twice as fast, lines creep on battery. Steady pace (±20% for six readings) = +15% efficiency for 5 min. All journalled with the actual trigger values.
+- **Placed staff.** Pip / Mochi / Captain Crumb are hired once and assigned to a single machine each; buffs are local to that machine (Pip supercharges his Packer, Mochi thins her Mill's seed input, Crumb doubles his machine's buffers). No global multipliers.
+- **Progression.** Cogs economy (orders + market sales of surplus), machine tiers Mk.1–3, improvement tree where the meaningful buys change capability (floor slots, battery bank, buffer reinforcement, heat sinks, insulated wiring) — plus an honest stat stick (Splitter Belts) labelled as one.
+- **Context surfaces.** Settlement Timeline (7 d), Workshop Almanac (30 d of the real wheel), SqueekFi snapshot, Shift Journal with the player's own typed foreman's notes, reviewer proof panel, `?overlay=1` stream mode, synthesized SFX, reduced-motion support, localStorage save under the new key `squeekworks-save-v1` (v2 saves are not imported — different game).
+
+## The red team, again
+
+An independent Nemotron-Ultra review of the v3 concept (full text: CRITIQUE-V3.md) returned **"BORDERLINE FAIL — high risk of thin-wrapper rejection"** and five named weaknesses. Shipped responses: circuit breakers (adopted), placed staff (adopted), build-gated recipes (adopted), venting with a real cost (adopted), typed logbook notes (adopted), store-cap back-pressure (adopted). Not adopted, stated plainly in CRITIQUE-V3.md: a drawable tile-graph belt system and event minigames — they did not fit single-file scope next to the full economy sim; the floor is slot-based and the canvas belts are visual. We would rather ship the criticism with the game than pretend it away.
+
+## Anti-slop checklist — each banned category vs. this build
+
+- **Read-only dashboard / explorer / tracker** — The Almanac and Timeline are context panels inside a management sim whose core loop (build, allocate, produce, deliver) runs on player decisions every minute. Remove them and the game is intact; remove the API and the factory starves. The dashboard is not the product.
+- **Landing / link-hub / token page** — No landing screen; the first screen is the playable factory floor. The only outbound links are per-settlement Etherscan tx links and the SQK contract link inside the snapshot panel.
+- **Launch with no product** — The product is complete and playable offline-of-any-backend from file://: full economy, save/export/import, progression, events, orders. Nothing is "coming soon".
+- **Fork / template / light change** — Original concept and code, written for this submission. Git history shows v1 → v2 (raid) → v3 (tycoon) as three distinct builds in this repo; v3 shares only the API-plumbing discipline with v2, no game code.
+- **Thin API wrapper** — The API is consumed as a physics engine: watts, battery charge, order generation/sizing/deadlines, and event triggers are all computed from live fields by game logic (throttle allocation, chain conversion, expiry) — not displayed raw. The proof panel exists precisely so a reviewer can watch the derivation happen.
+- **Copy of someone else's project** — The known Squeekchain projects (prediction game, garden puzzle, odometer overlay, last-buyer token game) share no mechanic with a production-chain tycoon. Staff names carried over from our own v2; every system around them is new.
+- **Low-effort slop to game Aura Farm** — Evidence against: a published in-repo red-team critique of our own concept with adopted/not-adopted responses; a Node DOM-stub harness executing the shipped code against live-captured payloads from all five endpoints (22 checks: power derivation, no-retro-credit, throttle math, chain conversion at full and starved power, order lifecycle, event triggers, save round-trip); byte-identical deploys on two independent hosts; a concept/devlog section in-game that names the previous concept's rejection and why.
+
+## Tests (v3)
+
+- node --check: both inline script blocks PASS.
+- Element-ID cross-check: 38 JS-referenced IDs, all present; zero external resource loads.
+- Local serve: HTTP 200, byte-identical to the repo file.
+- DOM-stub harness vs live payloads: 22/22 PASS (listed in CRITIQUE-V3 response table and reproducible from the repo state at this commit).
+- Live deploys verified byte-identical on Vercel and GitHub Pages (size + content marker "SQUEEK WORKS").
