@@ -4,7 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SQUEEK RAID — a Squeekchain Genesis boss-raid game</title>
-<meta name="description" content="SQUEEK RAID: a co-op boss-raid game powered by Squeektoshi, Squeekchain's real hamster. The wheel is real. The raid is real. The points are not money.">
+<meta name="description" content="SQUEEK RAID: a boss-raid game powered by Squeektoshi, Squeekchain's real hamster. Bosses remember their scars, settlements hit back, and your Energy is earned by a real wheel turning in the real world. Points only — no wallet, no money.">
+<meta property="og:title" content="SQUEEK RAID — a Squeekchain Genesis boss-raid game">
+<meta property="og:description" content="A boss raid powered by a real hamster. Energy from real wheel distance, raid damage from real on-chain settlements, bosses that remember who felled them.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#14100c">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='20' cy='14' r='9' fill='%23c98d45'/%3E%3Ccircle cx='44' cy='14' r='9' fill='%23c98d45'/%3E%3Ccircle cx='20' cy='14' r='4.5' fill='%23e88ca0'/%3E%3Ccircle cx='44' cy='14' r='4.5' fill='%23e88ca0'/%3E%3Ccircle cx='32' cy='36' r='24' fill='%23e8b06a'/%3E%3Ccircle cx='23' cy='32' r='3.4' fill='%2314100c'/%3E%3Ccircle cx='41' cy='32' r='3.4' fill='%2314100c'/%3E%3Cellipse cx='32' cy='42' rx='5' ry='3.6' fill='%23e88ca0'/%3E%3Cpath d='M26 50q6 4 12 0' stroke='%2314100c' stroke-width='2.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
   :root{
     --bg:#14100c;
@@ -25,6 +31,7 @@
     --weak:#8a7a63;
     --hp:#e5484d;
     --hpbg:#40201f;
+    --shield:#9bd1ff;
     --energy:#f5a623;
     --radius:14px;
     --shadow:0 10px 30px rgba(0,0,0,.45);
@@ -41,13 +48,14 @@
   }
   a{color:var(--amber2)}
   a:hover{color:var(--cheese)}
-  .wrap{max-width:1080px;margin:0 auto;padding:16px 14px 40px}
+  .wrap{max-width:1120px;margin:0 auto;padding:16px 14px 40px}
 
   /* ---------- header ---------- */
   header.top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:6px 0 14px}
   .logo{font-size:clamp(28px,5vw,42px);font-weight:900;letter-spacing:.5px;line-height:1;
     color:var(--cheese);text-shadow:0 2px 0 #7a4d00, 0 6px 18px rgba(245,166,35,.35)}
   .logo span{color:var(--amber)}
+  .logo .ver{font-size:12px;vertical-align:super;color:var(--muted);text-shadow:none;letter-spacing:.08em}
   .tagline{color:var(--muted);font-size:14px}
   .badge-live{margin-left:auto;display:inline-flex;align-items:center;gap:8px;
     background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px}
@@ -60,7 +68,7 @@
     border:1px solid var(--line);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
   @media (max-width:640px){.livestrip{grid-template-columns:1fr}}
   #wheelCanvas{width:220px;height:160px;max-width:100%;display:block;margin:0 auto}
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-content:start}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;align-content:start}
   .stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
   .stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
   .stat .v{font-size:20px;font-weight:800;color:var(--cream);margin-top:2px}
@@ -71,6 +79,9 @@
   .napbanner{grid-column:1/-1;display:none;border-radius:10px;padding:8px 12px;font-size:14px;
     background:#1c2733;border:1px solid #2c4257;color:#a9c8e8}
   body.napping .napbanner{display:block}
+  .surgebanner{grid-column:1/-1;display:none;border-radius:10px;padding:8px 12px;font-weight:700;font-size:14px;
+    background:linear-gradient(90deg,#12314f,#1d4e79);border:1px solid var(--blue);color:#cfe8ff}
+  body.surge-banked .surgebanner{display:block}
 
   /* ---------- layout ---------- */
   .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:14px;margin-top:14px}
@@ -78,6 +89,8 @@
   .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
   .card h2{margin:0 0 10px;font-size:18px;letter-spacing:.02em}
   .card h3{margin:14px 0 8px;font-size:15px;color:var(--amber2)}
+  .card p{line-height:1.55}
+  .subnote{font-size:12.5px;color:var(--muted)}
 
   /* ---------- boss ---------- */
   .bosshead{display:flex;gap:14px;align-items:center}
@@ -92,14 +105,32 @@
     width:38px;height:18px;border:3px solid #14100c;border-top:none;border-radius:0 0 24px 24px}
   .boss-art .crown{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:0;height:0;
     border-left:12px solid transparent;border-right:12px solid transparent;border-bottom:20px solid var(--cheese)}
+  .boss-art .scar{position:absolute;display:none;left:16px;top:52px;width:52px;height:4px;border-radius:2px;
+    background:rgba(20,16,12,.55);transform:rotate(-24deg);box-shadow:0 1px 0 rgba(255,255,255,.25)}
+  .boss-art.scarred .scar{display:block}
+  .boss-art .shieldring{position:absolute;inset:-9px;border-radius:50%;border:3px dashed var(--shield);
+    opacity:0;transition:opacity .3s;pointer-events:none}
+  body.guard-active .boss-art .shieldring{opacity:.95;animation:spinring 7s linear infinite}
+  @keyframes spinring{to{transform:rotate(360deg)}}
   .bossname{font-size:clamp(20px,3.4vw,27px);font-weight:900;line-height:1.1}
   .bosstitle{color:var(--muted);font-size:13px;margin-top:2px}
+  .bossmemory{font-size:12.5px;color:#a9c8e8;margin-top:3px}
   .hpwrap{margin-top:14px}
   .hplabel{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:5px}
   .hplabel b{color:var(--cream)}
   .hpbar{height:22px;background:var(--hpbg);border:1px solid var(--line);border-radius:999px;overflow:hidden}
   .hpfill{height:100%;width:100%;background:linear-gradient(90deg,#ff7a59,var(--hp));
     border-radius:999px;transition:width .45s cubic-bezier(.2,.8,.2,1)}
+  .shieldbar{height:9px;background:#16222e;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-top:5px;display:none}
+  body.has-shield .shieldbar{display:block}
+  .shieldfill{height:100%;width:0%;background:linear-gradient(90deg,#6db9f2,var(--shield));transition:width .3s ease}
+  .mechbanner{display:none;margin-top:12px;border-radius:10px;padding:9px 12px;font-size:14px;line-height:1.45;
+    background:#2e1a2e;border:1px solid #6b3a6b;color:#f0d0f0}
+  body.guard-active .mechbanner{display:block}
+  .mechbanner b{color:#ffb3ff}
+  .enragebanner{display:none;margin-top:10px;border-radius:10px;padding:8px 12px;font-size:13.5px;
+    background:#3a1414;border:1px solid var(--red);color:#ffc9c9}
+  body.enraged .enragebanner{display:block}
   .arena{position:relative;margin-top:8px}
   .floater{position:absolute;left:50%;top:8px;transform:translateX(-50%);font-weight:900;pointer-events:none;
     font-size:30px;color:var(--cheese);text-shadow:0 2px 0 #000,0 0 18px rgba(255,217,77,.55);
@@ -107,6 +138,7 @@
   .floater.good{color:var(--good);font-size:24px}
   .floater.weak{color:var(--weak);font-size:19px}
   .floater.hamster{color:var(--blue);font-size:24px}
+  .floater.surge{color:#9bd1ff;font-size:26px}
   @keyframes floatUp{0%{opacity:0;transform:translate(-50%,10px) scale(.8)}
     15%{opacity:1;transform:translate(-50%,0) scale(1.12)}
     100%{opacity:0;transform:translate(-50%,-72px) scale(1)}}
@@ -114,7 +146,7 @@
   @keyframes shake{0%,100%{transform:translate(0)}20%{transform:translate(-7px,3px)}
     40%{transform:translate(6px,-4px)}60%{transform:translate(-5px,-2px)}80%{transform:translate(4px,2px)}}
 
-  /* ---------- timing bar ---------- */
+  /* ---------- timing bar / combo ---------- */
   .timing{margin-top:18px}
   .bar{position:relative;height:34px;border-radius:999px;border:1px solid var(--line);
     background:linear-gradient(90deg,#3a2c1c,#4a3823 38%,#4a3823 62%,#3a2c1c);overflow:hidden}
@@ -123,8 +155,14 @@
   .zone.perfect{background:rgba(255,217,77,.75);box-shadow:0 0 14px rgba(255,217,77,.7)}
   .marker{position:absolute;top:-2px;bottom:-2px;width:6px;margin-left:-3px;border-radius:3px;
     background:#fff;box-shadow:0 0 10px #fff,0 0 3px #fff}
+  .marker.frozen{background:var(--blue);box-shadow:0 0 10px var(--blue)}
   .zonelabels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.06em}
-  .controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:stretch}
+  .comborow{display:flex;align-items:center;gap:10px;margin-top:10px;min-height:22px}
+  .combolabel{font-weight:900;font-size:14px;color:var(--muted);letter-spacing:.04em}
+  body.combo-hot .combolabel{color:var(--cheese)}
+  .comboflames{font-size:15px;letter-spacing:2px;color:var(--amber)}
+  .surgeline{margin-left:auto;font-size:13px;color:#a9c8e8;font-weight:700}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;align-items:stretch}
   button{font:inherit;font-weight:800;border-radius:12px;border:1px solid var(--line);
     background:var(--panel2);color:var(--cream);padding:12px 18px;cursor:pointer}
   button:hover:not(:disabled){border-color:var(--amber)}
@@ -135,11 +173,10 @@
     box-shadow:0 6px 0 #8a5f06, 0 12px 24px rgba(0,0,0,.4)}
   #attackBtn:active:not(:disabled){transform:translateY(4px);box-shadow:0 2px 0 #8a5f06}
   .energyline{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}
-  .energy p{margin:0}
   .pips{display:inline-flex;gap:4px;flex-wrap:wrap}
   .pip{width:16px;height:22px;border-radius:5px;background:#3a2c1c;border:1px solid var(--line)}
   .pip.on{background:linear-gradient(180deg,var(--amber2),var(--energy));box-shadow:0 0 8px rgba(245,166,35,.6)}
-  .hint{font-size:13px;color:var(--muted)}
+  .hint{font-size:13px;color:var(--muted);line-height:1.5}
 
   /* ---------- side column ---------- */
   .pip-talk{display:flex;gap:12px;align-items:flex-start}
@@ -153,6 +190,10 @@
   .pip-face .ear.l{left:2px}.pip-face .ear.r{right:2px}
   #pipLine{font-size:15px;line-height:1.45;margin:2px 0 0}
   #pipLine .who{color:var(--amber2);font-weight:800}
+  .companionrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .companionrow button{padding:8px 12px;font-size:13px}
+  .companionrow button.active{color:#241a05;background:linear-gradient(180deg,var(--amber2),var(--amber));border-color:#8a5f06}
+  .companionbuff{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.45}
   .kv{display:grid;grid-template-columns:1fr auto;gap:5px 12px;font-size:14px}
   .kv dt{color:var(--muted)}
   .kv dd{margin:0;font-weight:800;text-align:right}
@@ -168,17 +209,95 @@
   .log .ham{color:var(--blue);font-weight:700}
   .rowbtns{display:flex;gap:8px;flex-wrap:wrap}
   .rowbtns button{padding:9px 13px;font-size:13.5px}
+
+  /* ---------- quests / pass / upgrades ---------- */
+  .quest{border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:9px 11px;margin-bottom:8px}
+  .quest .qhead{display:flex;justify-content:space-between;gap:8px;font-size:13.5px}
+  .quest .qname{font-weight:800}
+  .quest .qreward{color:var(--amber2);font-weight:800;white-space:nowrap}
+  .quest .qbar{height:8px;background:#1a140e;border-radius:999px;overflow:hidden;margin-top:7px;border:1px solid var(--line)}
+  .quest .qfill{height:100%;background:linear-gradient(90deg,var(--amber),var(--amber2));width:0%;transition:width .35s ease}
+  .quest.done{border-color:var(--green)}
+  .quest.done .qname::after{content:" ✓ CLAIMED";color:var(--green);font-size:11px}
+  .quest .qprog{font-size:12px;color:var(--muted);margin-top:4px}
+  .tiers{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .tier{font-size:11.5px;font-weight:700;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:var(--panel2);color:var(--muted);line-height:1.3}
+  .tier.on{color:#cfe8ff;border-color:var(--blue);background:#1d2f42}
+  .tier.next{border-color:var(--amber);color:var(--amber2)}
+  .passbar{height:12px;background:#1a140e;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-top:8px}
+  .passfill{height:100%;background:linear-gradient(90deg,#2f7fc4,var(--blue));width:0%;transition:width .4s ease}
+  .upg{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);
+    border-radius:10px;background:var(--panel2);padding:9px 11px;margin-bottom:8px}
+  .upg .uinfo{font-size:13.5px;line-height:1.4}
+  .upg .uinfo b{font-size:14px}
+  .upg .udots{color:var(--amber);letter-spacing:2px;font-size:12px}
+  .upg button{padding:8px 12px;font-size:13px;white-space:nowrap}
+
+  /* ---------- timeline / almanac ---------- */
+  .timeline{list-style:none;margin:0;padding:0;font-size:13px}
+  .timeline li{display:flex;flex-wrap:wrap;gap:4px 10px;padding:7px 9px;border:1px solid var(--line);
+    border-radius:9px;margin-bottom:6px;background:var(--panel2);line-height:1.4}
+  .timeline .tt{color:var(--muted);white-space:nowrap}
+  .timeline .tw{font-weight:800;color:#a9c8e8}
+  canvas.chart{width:100%;height:110px;display:block;background:#1a140e;border:1px solid var(--line);border-radius:10px}
+  canvas.chart.tall{height:130px}
+  .almanacstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:10px}
+
+  /* ---------- about / proof ---------- */
+  .ep-table{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0}
+  .ep-table th,.ep-table td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top;line-height:1.4}
+  .ep-table th{background:var(--panel2);color:var(--amber2)}
+  .ep-table code{font-size:12px;color:#a9c8e8;word-break:break-all}
+  details.howto{margin-top:12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:10px 12px}
+  details.howto summary{cursor:pointer;font-weight:800}
+  details.howto div{font-size:13.5px;line-height:1.6;margin-top:8px}
+  .proof{display:none;margin-top:12px;border:1px dashed var(--blue);border-radius:10px;padding:10px 12px;background:#16212c}
+  body.reviewer .proof{display:block}
+  .proof pre{margin:0;font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-all;color:#cfe8ff}
+  .switchrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .switchrow button{padding:8px 12px;font-size:13px}
+  .switchrow button.active{color:#241a05;background:linear-gradient(180deg,var(--amber2),var(--amber));border-color:#8a5f06}
+
+  /* ---------- stream overlay mode (?overlay=1) ---------- */
+  #overlayView{display:none}
+  body.overlay{background:transparent}
+  body.overlay .wrap{display:none}
+  body.overlay #overlayView{display:flex;align-items:center;gap:14px;max-width:640px;
+    background:rgba(20,16,12,.82);border:1px solid var(--line);border-radius:16px;padding:12px 16px}
+  #ovCanvas{width:150px;height:109px;flex:0 0 auto}
+  .ov-main{flex:1;min-width:0}
+  .ov-boss{font-weight:900;font-size:19px;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ov-hpbar{height:14px;background:var(--hpbg);border-radius:999px;overflow:hidden;margin:7px 0}
+  .ov-hpfill{height:100%;background:linear-gradient(90deg,#ff7a59,var(--hp));width:100%}
+  .ov-row{display:flex;gap:14px;flex-wrap:wrap;font-size:13.5px;font-weight:700;color:var(--amber2)}
+
   footer{margin-top:22px;color:var(--muted);font-size:13.5px;line-height:1.6}
   footer .rules{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:13px 16px}
   .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  @media (prefers-reduced-motion: reduce){
+    .floater{animation-duration:.01s}
+    body.shake .bosscol{animation:none}
+    body.guard-active .boss-art .shieldring{animation:none}
+    .hpfill,.xpfill,.quest .qfill,.passfill{transition:none}
+  }
 </style>
 </head>
 <body>
+<!-- STREAM OVERLAY VIEW (open the page with ?overlay=1 — built for OBS browser sources) -->
+<div id="overlayView" aria-label="Stream overlay">
+  <canvas id="ovCanvas" width="440" height="320" aria-hidden="true"></canvas>
+  <div class="ov-main">
+    <div class="ov-boss" id="ovBoss">SQUEEK RAID</div>
+    <div class="ov-hpbar"><div class="ov-hpfill" id="ovHpFill"></div></div>
+    <div class="ov-row"><span id="ovRpm">— RPM</span><span id="ovRound">Round —</span><span id="ovCountdown">Settles —</span><span id="ovLevel">Lv 1</span></div>
+  </div>
+</div>
+
 <div class="wrap">
 
   <header class="top">
     <div>
-      <div class="logo">SQUEEK <span>RAID</span></div>
+      <div class="logo">SQUEEK <span>RAID</span><sup class="ver">v2</sup></div>
       <div class="tagline">A boss raid powered by a real hamster on a real wheel.</div>
     </div>
     <div class="badge-live" role="status" aria-label="Connection status">
@@ -200,6 +319,7 @@
       <div class="stat"><div class="k">Squeektoshi raid damage</div><div class="v" id="stHamDamage">0</div></div>
       <div class="buffbanner" role="status">Squeektoshi is RUNNING — Perfect window widened, mega-crits armed. Strike now!</div>
       <div class="napbanner" role="status">Squeektoshi is napping. Wheel energy is paused — use Focus to keep raiding.</div>
+      <div class="surgebanner" role="status" id="surgeBanner">Surge banked — your next settlement strike hits harder.</div>
     </div>
   </section>
 
@@ -208,11 +328,12 @@
     <section class="card bosscol" aria-label="Boss battle">
       <div class="arena" id="arena">
         <div class="bosshead">
-          <div class="boss-art" id="bossArt" aria-hidden="true"><span class="crown" id="bossCrown"></span><span class="mouth"></span></div>
+          <div class="boss-art" id="bossArt" aria-hidden="true"><span class="shieldring"></span><span class="crown" id="bossCrown"></span><span class="scar"></span><span class="mouth"></span></div>
           <div>
             <div class="bossname" id="bossName">…</div>
             <div class="bosstitle" id="bossTitle">…</div>
             <div class="bosstitle" id="bossMeta"></div>
+            <div class="bossmemory" id="bossMemory"></div>
           </div>
         </div>
         <div class="hpwrap">
@@ -220,7 +341,12 @@
           <div class="hpbar" role="progressbar" aria-label="Boss health" id="hpBar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
             <div class="hpfill" id="hpFill"></div>
           </div>
+          <div class="shieldbar" aria-hidden="true"><div class="shieldfill" id="shieldFill"></div></div>
+          <div class="hplabel" id="shieldLabel" style="display:none"><span>Dust shield</span><b id="shieldText"></b></div>
         </div>
+
+        <div class="mechbanner" id="mechBanner" role="status"></div>
+        <div class="enragebanner" id="enrageBanner" role="status"></div>
 
         <div class="timing">
           <div class="bar" id="timingBar" aria-hidden="true">
@@ -231,42 +357,83 @@
           <div class="zonelabels"><span>Weak</span><span>Good</span><span>Perfect</span><span>Good</span><span>Weak</span></div>
         </div>
 
+        <div class="comborow" aria-label="Combo and surge status">
+          <span class="combolabel" id="comboLabel">COMBO ×0</span>
+          <span class="comboflames" id="comboFlames"></span>
+          <span class="surgeline" id="surgeLine"></span>
+        </div>
+
         <div class="controls">
           <button id="attackBtn" aria-label="Attack the boss (or press Space)">ATTACK</button>
-          <button id="focusBtn" aria-label="Focus: gain 1 energy, 20 second cooldown">Focus +1</button>
+          <button id="focusBtn" aria-label="Focus: gain energy, cooldown applies">Focus +1</button>
         </div>
 
         <div class="energyline">
           <span class="hint" id="energyText">Energy</span>
           <span class="pips" id="energyPips" aria-hidden="true"></span>
         </div>
-        <p class="hint">Every 25 m the real wheel turns earns you +1 Energy. Time your strike: the white marker is judged where it stops — dead centre is a Perfect crit.</p>
+        <p class="hint" id="perfectHint">Every 25 m the real wheel turns earns you +1 Energy. Perfect = the centre ±4% of the bar (±7% while Squeektoshi runs). Chain Perfects to build a combo — damage grows up to ×2, and Perfects landed at combo ×3 or higher bank <b>Surge</b> charges that amplify the hamster's next settlement strike.</p>
+
+        <details class="howto">
+          <summary>How to play</summary>
+          <div>
+            <b>Strike:</b> press ATTACK or Space as the white marker crosses the bar. Gold centre = Perfect (×3 damage, or a ×5 mega-crit while the hamster runs). Green = a solid hit. Edges = a graze.<br>
+            <b>Energy:</b> each attack costs Energy (2 during the Fridge Raider's Deep Freeze). Energy refills from the <i>real</i> distance Squeektoshi runs — 25 m per point — or slowly via Focus.<br>
+            <b>Combos &amp; Surge:</b> consecutive Perfects build your combo multiplier. At combo ×3+, every Perfect also banks a Surge charge (max 5). When a round settles on-chain, Squeektoshi strikes the boss — and your banked Surge makes that strike hit +20% harder per charge.<br>
+            <b>Boss mechanics:</b> at 66% and 33% HP every boss unleashes its signature move for 12 seconds — guards that only Perfects pierce, dust shields, a frozen or reversing marker, a faster bar, a narrower Perfect window. Watch the banner.<br>
+            <b>Enrage:</b> dawdle and the boss enrages when its round budget runs out: it heals and armours up. Bosses remember every defeat — check the scar and the memory line under its name.<br>
+            <b>Progression:</b> daily quests and Wheel Pass tiers pay Raid Tokens. Spend them in the Upgrade Tree. Your companion changes how you play — pick one under the arena.
+          </div>
+        </details>
       </div>
     </section>
 
     <!-- SIDE COLUMN -->
     <div>
-      <section class="card" aria-label="Pip the sidekick">
+      <section class="card" aria-label="Your companion">
         <div class="pip-talk">
           <div class="pip-face" aria-hidden="true"><span class="ear l"></span><span class="ear r"></span><span class="nose"></span></div>
-          <p id="pipLine" aria-live="polite"><span class="who">Pip:</span> <span id="pipText">Loading the raid…</span></p>
+          <p id="pipLine" aria-live="polite"><span class="who" id="pipWho">Pip:</span> <span id="pipText">Loading the raid…</span></p>
         </div>
+        <div class="companionrow" role="group" aria-label="Choose your companion">
+          <button id="compPip" data-comp="pip">Pip</button>
+          <button id="compMochi" data-comp="mochi">Mochi</button>
+          <button id="compCaptain" data-comp="captain">Captain Crumb</button>
+        </div>
+        <p class="companionbuff" id="companionBuff"></p>
+      </section>
+
+      <section class="card" aria-label="Daily quests" style="margin-top:14px">
+        <h2>Daily Quests <span class="subnote">(UTC day)</span></h2>
+        <div id="questList"></div>
+        <p class="subnote" id="questNote">Quests are bound to the real chain: settlements you actually witness, rounds you actually fight in, metres the wheel actually turns. Finish all three for a bonus token.</p>
       </section>
 
       <section class="card" aria-label="Your raider" style="margin-top:14px">
         <h2>Your Raider</h2>
         <dl class="kv">
           <dt>Level</dt><dd id="kvLevel">1</dd>
+          <dt>Title</dt><dd id="kvTitle">Seed Stasher</dd>
           <dt>Energy cap</dt><dd id="kvCap">10</dd>
           <dt>Base damage</dt><dd id="kvDmg">10</dd>
+          <dt>Raid Tokens</dt><dd id="kvTokens">0</dd>
           <dt>XP</dt><dd id="kvXp">0</dd>
         </dl>
         <div class="xpbar" aria-hidden="true"><div class="xpfill" id="xpFill"></div></div>
+
+        <h3>Wheel Pass — distance you have witnessed</h3>
+        <p class="subnote" style="margin:0">The real wheel, counted by your own eyes: <b id="passMeters">0 m</b> witnessed so far. Each tier pays 1 Raid Token.</p>
+        <div class="passbar" aria-hidden="true"><div class="passfill" id="passFill"></div></div>
+        <div class="tiers" id="tierRow"></div>
+
+        <h3>Upgrade Tree <span class="subnote">(spend Raid Tokens)</span></h3>
+        <div id="upgList"></div>
 
         <h3>Lifetime stats</h3>
         <dl class="kv">
           <dt>Attacks</dt><dd id="kvAttacks">0</dd>
           <dt>Perfect strikes</dt><dd id="kvPerfects">0</dd>
+          <dt>Best combo</dt><dd id="kvBestCombo">×0</dd>
           <dt>Your damage</dt><dd id="kvPlayerDmg">0</dd>
           <dt>Squeektoshi damage</dt><dd id="kvHamDmg">0</dd>
           <dt>Bosses beaten</dt><dd id="kvBosses">0</dd>
@@ -278,6 +445,7 @@
         <h3>Save data</h3>
         <div class="rowbtns">
           <button id="exportBtn" aria-label="Export your save as a JSON file">Export save</button>
+          <button id="badgeBtn" aria-label="Export a dynamic SVG raider badge with your stats">Export badge (SVG)</button>
           <button id="importBtn" aria-label="Import a save from a JSON file">Import save</button>
           <input type="file" id="importFile" accept="application/json,.json" class="sr" aria-label="Choose a save file to import">
           <button id="resetBtn" aria-label="Reset all progress">Reset</button>
@@ -291,14 +459,63 @@
     </div>
   </div>
 
+  <div class="grid">
+    <section class="card" aria-label="Settlement timeline">
+      <h2>Settlement Timeline <span class="subnote">(last 7 days, straight from the chain)</span></h2>
+      <p class="subnote" id="timelineSummary" style="margin-top:0">Loading settlements…</p>
+      <canvas class="chart tall" id="sparkCanvas" width="640" height="130" aria-label="Chart of settled work per settlement, last 30 settlements"></canvas>
+      <ul class="timeline" id="timelineList" style="margin-top:10px"></ul>
+    </section>
+
+    <section class="card" aria-label="Hamster almanac">
+      <h2>Hamster Almanac <span class="subnote">(30 days of the real wheel)</span></h2>
+      <canvas class="chart tall" id="almanacCanvas" width="520" height="130" aria-label="Bar chart of Squeektoshi's distance per day over the last 30 days"></canvas>
+      <div class="almanacstats">
+        <div class="stat"><div class="k">Career distance</div><div class="v" id="almDistance">—</div></div>
+        <div class="stat"><div class="k">Career work</div><div class="v" id="almWork">—</div></div>
+        <div class="stat"><div class="k">Active days</div><div class="v" id="almDays">—</div></div>
+        <div class="stat"><div class="k">Best day</div><div class="v" id="almBest">—</div></div>
+      </div>
+      <p class="subnote" id="almPeak"></p>
+      <h3>SqueekFi snapshot</h3>
+      <p class="subnote" id="econLine" style="margin:0">Loading SQK supply…</p>
+    </section>
+  </div>
+
+  <section class="card" aria-label="About this build" style="margin-top:14px">
+    <h2>About this build — how SQUEEK RAID uses Squeekchain</h2>
+    <p>SQUEEK RAID is not a dashboard with a button glued on. The chain is the game's engine: a real hamster's real running is the energy economy, real on-chain settlements are the raid's heavy artillery, and real rounds are the clock everything is paced against. Everything below runs from Squeekchain's public API — no keys, no wallet, no backend, no tracking.</p>
+    <table class="ep-table">
+      <tr><th>Endpoint</th><th>Polled</th><th>What it drives in the game</th></tr>
+      <tr><td><code>GET /v1/status</code></td><td>10 s</td><td>Wheel animation speed (real RPM), Energy from real distance deltas, the running buff, live round number, daily-quest distance &amp; running-damage tracking, Wheel Pass witnessed metres.</td></tr>
+      <tr><td><code>GET /v1/settlements?range=24h</code></td><td>60 s</td><td>Settlement detection: when <code>settledThroughRound</code> advances, Squeektoshi strikes for <code>workAdded × 2</code> damage (amplified by your banked Surge), with the settlement tx linked in the raid log. Also the next-settlement countdown and settlement-witness quests.</td></tr>
+      <tr><td><code>GET /v1/settlements?range=7d</code></td><td>5 min</td><td>The Settlement Timeline below the arena: the last settlements with rounds covered, work, blocks and Etherscan links, plus a work-per-settlement chart.</td></tr>
+      <tr><td><code>GET /v1/measurement/stats?range=30d</code></td><td>5 min</td><td>The Hamster Almanac: 30 days of nightly distance, career totals, best day, and the wheel's peak running window.</td></tr>
+      <tr><td><code>GET /v1/economy/state</code></td><td>5 min</td><td>The SqueekFi snapshot: live SQK supply vs. cap from the token contract the API reports.</td></tr>
+    </table>
+    <p><b>Running-detection rule:</b> Squeektoshi counts as RUNNING iff <code>rpmMilli &gt; 0</code> <i>or</i> <code>speedMmPerSecond &gt; 0</code>. The API's <code>coreStatus</code> is never trusted alone — it can report IDLE while the wheel is physically turning.</p>
+    <p><b>Anti-fake rules the game holds itself to:</b> (1) the first settlement seen after loading only sets a baseline — no retroactive damage for rounds you weren't here for; (2) distance is counted only from live deltas, and if the API's counter epoch changes, the baseline resets instead of crediting a teleporting hamster; (3) stale or offline data is badged as such, never dressed up as live; (4) every API number arrives as a string and is parsed defensively — a malformed field degrades one readout, never the game.</p>
+    <p><b>Design notes:</b> bosses were given mechanics, memory and grudges (enrage timers) so the raid is a game first and a data demo second; quests and the Wheel Pass only count things you genuinely witnessed, so progress can't be farmed by leaving a tab open on a dead wheel — the wheel has to actually turn.</p>
+    <p><b>Streamers:</b> open this page with <code>?overlay=1</code> for a compact overlay view (wheel, boss HP, RPM, round, settlement countdown) built for an OBS browser source. <b>Collectors:</b> the "Export badge (SVG)" button in the save card generates a dynamic raider badge — an SVG portrait of your career (title, level, bosses felled, best combo, current week) with ERC-721-style metadata embedded, ready if the wheel ever gets a mint.</p>
+    <div class="switchrow">
+      <button id="reviewerBtn" aria-pressed="false">Reviewer mode: show the proof</button>
+      <button id="soundBtn" aria-pressed="true">Sound: on</button>
+    </div>
+    <div class="proof" id="proofPanel" aria-label="Live API proof panel">
+      <pre id="proofText">Waiting for the first API read…</pre>
+    </div>
+    <p class="subnote">Devlog — v2.0: boss signature mechanics + enrage, boss memory &amp; scars, combo system, Surge banking on settlements, 3 companions, daily chain-bound quests, Wheel Pass, upgrade tree, settlement timeline, hamster almanac, SqueekFi snapshot, reviewer proof panel, synthesized sound. v1.0: core raid loop, timing combat, settlement damage, Pip, badges.</p>
+  </section>
+
   <footer>
     <div class="rules">
-      <strong>How it works:</strong> SQUEEK RAID reads Squeekchain's public live API. Your attacks are a timing game; your Energy refills from the real distance Squeektoshi runs; and every time a round settles on-chain, Squeektoshi himself smacks the boss for damage based on the work in that settlement.
+      <strong>How it works:</strong> SQUEEK RAID reads Squeekchain's public live API. Your attacks are a timing game; your Energy refills from the real distance Squeektoshi runs; every time a round settles on-chain, Squeektoshi himself smacks the boss for damage based on the work in that settlement — and your banked Surge makes it hurt more.
       <br><strong>Rules:</strong> points only — no wallet connection, no transactions, no money, no betting. Progress lives in your browser's local storage only; nothing is tracked or sent anywhere.
     </div>
     <p>SQUEEK RAID — a Squeekchain Genesis game by kingklowor ·
       <a href="https://squeekchain.com/genesis">Squeekchain Genesis</a> ·
-      <a href="https://sepolia.squeekchain.com/status">Squeekchain live status</a>
+      <a href="https://sepolia.squeekchain.com/status">Squeekchain live status</a> ·
+      <a href="https://github.com/Klowor2002/squeek-raid">Source on GitHub</a>
       <br>Fan-made community game. Testnet only. Not affiliated with Squeekchain.</p>
   </footer>
 </div>
@@ -306,26 +523,50 @@
 <script>
 "use strict";
 /* ============================================================
-   SQUEEK RAID — a boss raid powered by a real hamster.
+   SQUEEK RAID v2 — a boss raid powered by a real hamster.
    Single file. No backend. No wallet. No tracking.
    Live data: https://api.squeekchain.com (public, CORS-enabled)
    ============================================================ */
 
-var API_STATUS = "https://api.squeekchain.com/v1/status";
-var API_SETTLE = "https://api.squeekchain.com/v1/settlements?range=24h";
+var API_STATUS  = "https://api.squeekchain.com/v1/status";
+var API_SETTLE  = "https://api.squeekchain.com/v1/settlements?range=24h";
+var API_SETTLE7 = "https://api.squeekchain.com/v1/settlements?range=7d";
+var API_STATS   = "https://api.squeekchain.com/v1/measurement/stats?range=30d";
+var API_ECON    = "https://api.squeekchain.com/v1/economy/state";
 var STATUS_MS = 10000;
 var SETTLE_MS = 60000;
+var SLOW_MS   = 300000;
 var METERS_PER_ENERGY = 25;      /* metres of real wheel distance per +1 energy */
 var ROUND_SECONDS = 600;
-var SAVE_KEY = "squeekraid_save_v1";
+var SAVE_KEY_V2 = "squeekraid_save_v2";
+var SAVE_KEY_V1 = "squeekraid_save_v1";
+var APP_VERSION = "2.0";
 
-/* ---------------- boss roster ---------------- */
+/* ---------------- boss roster ----------------
+   mech: signature move, armed for MECH_SECONDS at 66% and 33% HP.
+   guard: during the move, only Perfect strikes deal full damage. */
+var MECH_SECONDS = 12;
 var BOSSES = [
-  { name: "Baron von Broccoli",       title: "Veggie menace. Demands you eat your greens.",        hp: 600,  c1: "#b5e48c", c2: "#5da23a", crown: false },
-  { name: "The Dust Bunny King",      title: "Ruler of everything under the sofa.",                hp: 900,  c1: "#d9d4e8", c2: "#7d7390", crown: true  },
-  { name: "Sir Snoozington, the Nap Cat", title: "Has slept through three alarms and one raid.",   hp: 1400, c1: "#ffd9a0", c2: "#c97b2d", crown: false },
-  { name: "VAK-9000 the Vacuum Menace",   title: "It knows where the seed stash is buried.",       hp: 2100, c1: "#cfd8dc", c2: "#5f737d", crown: false },
-  { name: "The Fridge Raider",        title: "Final boss of the midnight snack.",                  hp: 3200, c1: "#a8d8ff", c2: "#3a6ea8", crown: true  }
+  { name: "Baron von Broccoli", title: "Veggie menace. Demands you eat your greens.", hp: 600,
+    c1: "#b5e48c", c2: "#5da23a", crown: false, rounds: 60,
+    mech: { id: "photosynthesis", name: "Photosynthesis Rush",
+            desc: "Soaking up light — the strike bar moves 35% faster and only Perfects pierce his guard." } },
+  { name: "The Dust Bunny King", title: "Ruler of everything under the sofa.", hp: 900,
+    c1: "#d9d4e8", c2: "#7d7390", crown: true, rounds: 60,
+    mech: { id: "dustshield", name: "Dust Shield",
+            desc: "He knits a shield of pure lint. Burn through the shield first — Perfects cut it twice as fast." } },
+  { name: "Sir Snoozington, the Nap Cat", title: "Has slept through three alarms and one raid.", hp: 1400,
+    c1: "#ffd9a0", c2: "#c97b2d", crown: false, rounds: 70,
+    mech: { id: "drowse", name: "Drowse Field",
+            desc: "His snoring freezes your marker mid-sweep, and only Perfects pierce his guard." } },
+  { name: "VAK-9000 the Vacuum Menace", title: "It knows where the seed stash is buried.", hp: 2100,
+    c1: "#cfd8dc", c2: "#5f737d", crown: false, rounds: 70,
+    mech: { id: "reverse", name: "Reverse Suction",
+            desc: "The suction flips your marker's direction without warning. Only Perfects pierce his plating." } },
+  { name: "The Fridge Raider", title: "Final boss of the midnight snack.", hp: 3200,
+    c1: "#a8d8ff", c2: "#3a6ea8", crown: true, rounds: 80,
+    mech: { id: "deepfreeze", name: "Deep Freeze",
+            desc: "The Perfect window narrows, every attack costs 2 Energy, and only Perfects pierce the frost." } }
 ];
 
 var BADGES = [
@@ -335,47 +576,192 @@ var BADGES = [
   { id: "full-house",   label: "Full Roster",        test: function(s){ return s.stats.bossesBeaten >= BOSSES.length; } },
   { id: "wheel-friend", label: "Wheel's Best Friend",test: function(s){ return s.stats.hamsterDamage >= 1000; } },
   { id: "veteran",      label: "Raid Veteran Lv 5",  test: function(s){ return s.level >= 5; } },
-  { id: "big-hitter",   label: "10,000 Damage Club", test: function(s){ return s.stats.playerDamage >= 10000; } }
+  { id: "big-hitter",   label: "10,000 Damage Club", test: function(s){ return s.stats.playerDamage >= 10000; } },
+  { id: "combo-8",      label: "Combo Artist ×8",    test: function(s){ return (s.stats.bestCombo || 0) >= 8; } },
+  { id: "surge-5",      label: "Surge Banker",       test: function(s){ return (s.stats.surgeDischarged || 0) >= 5; } },
+  { id: "quest-3",      label: "Daily Devotee",      test: function(s){ return (s.stats.questDays || 0) >= 1; } },
+  { id: "pass-5",       label: "Wheel Witness ×5",   test: function(s){ return passTierCount(s.witnessedMeters) >= 5; } },
+  { id: "scarred",      label: "Scar Collector",     test: function(s){ return BOSSES.every(function(b, i){ return bossMemory(s, i).beaten > 0; }); } }
 ];
 
-/* ---------------- save state ---------------- */
+/* ---------------- wheel pass ---------------- */
+var PASS_TIERS = [
+  { m: 0,     title: "Seed Stasher" },
+  { m: 100,   title: "Burrow Guest" },
+  { m: 250,   title: "Wheel Watcher" },
+  { m: 500,   title: "Pace Keeper" },
+  { m: 1000,  title: "Kilometre Club" },
+  { m: 2000,  title: "Night Runner's Ally" },
+  { m: 4000,  title: "Marathon Witness" },
+  { m: 8000,  title: "Wheel Disciple" },
+  { m: 16000, title: "Squeek Sage" },
+  { m: 32000, title: "Legend of the Wheel" }
+];
+function passTierCount(meters){ var n = 0; PASS_TIERS.forEach(function(t){ if (meters >= t.m) n++; }); return n; }
+function passTitle(meters){ var t = PASS_TIERS[0].title; PASS_TIERS.forEach(function(x){ if (meters >= x.m) t = x.title; }); return t; }
+
+/* ---------------- upgrade tree ---------------- */
+var UPGRADES = [
+  { id: "power",   name: "Sharper Seeds",   max: 5, desc: "+2 base damage per level.",
+    cost: function(l){ return l + 1; } },
+  { id: "battery", name: "Bigger Cheeks",   max: 3, desc: "+2 Energy cap per level.",
+    cost: function(l){ return l + 1; } },
+  { id: "focus",   name: "Zen Breathing",   max: 3, desc: "Focus cooldown −3 s per level.",
+    cost: function(l){ return l + 1; } },
+  { id: "fortune", name: "Lucky Whisker",   max: 3, desc: "+5% mega-crit chance per level (while the hamster runs).",
+    cost: function(l){ return l + 1; } }
+];
+
+/* ---------------- daily quests ----------------
+   Seeded by UTC day so every visitor gets the same three. */
+var QUEST_POOL = [
+  { id: "witness",  name: "Settlement Witness", target: 2,   unit: "settlements witnessed",
+    blurb: "Be here when rounds settle on-chain." },
+  { id: "rundmg",   name: "Live Fire",          target: 300, unit: "damage dealt while Squeektoshi runs",
+    blurb: "Hit the boss while the wheel is actually turning." },
+  { id: "rounds",   name: "Round Traveller",    target: 3,   unit: "different rounds fought in",
+    blurb: "Land attacks in 3 different rounds." },
+  { id: "perfects", name: "Gold Rush",          target: 5,   unit: "Perfect strikes",
+    blurb: "Dead centre. Five times." },
+  { id: "focus",    name: "Deep Breaths",       target: 3,   unit: "Focus uses",
+    blurb: "Keep raiding through the nap." },
+  { id: "distance", name: "Pace Witness",       target: 500, unit: "metres of wheel witnessed today",
+    blurb: "Watch the real wheel turn half a kilometre." }
+];
+function utcDayKey(d){ return d.getUTCFullYear() + "-" + ("0" + (d.getUTCMonth() + 1)).slice(-2) + "-" + ("0" + d.getUTCDate()).slice(-2); }
+function seededPick(dayKey, n, pool){
+  var h = 2166136261;
+  for (var i = 0; i < dayKey.length; i++) { h ^= dayKey.charCodeAt(i); h = Math.imul(h, 16777619); }
+  var idx = pool.map(function(_, i){ return i; });
+  for (var k = idx.length - 1; k > 0; k--) {
+    h ^= h << 13; h ^= h >>> 17; h ^= h << 5; h >>>= 0;
+    var j = h % (k + 1); var t = idx[k]; idx[k] = idx[j]; idx[j] = t;
+  }
+  return idx.slice(0, n).map(function(i){ return pool[i]; });
+}
+function freshQuests(dayKey){
+  return seededPick(dayKey, 3, QUEST_POOL).map(function(q){
+    return { id: q.id, progress: 0, done: false };
+  });
+}
+function questDef(id){ for (var i = 0; i < QUEST_POOL.length; i++) if (QUEST_POOL[i].id === id) return QUEST_POOL[i]; return QUEST_POOL[0]; }
+
+/* ---------------- sound (synthesized, no audio files) ---------------- */
+var audioCtx = null;
+function sfx(kind){
+  if (!S || S.soundOn === false) return;
+  try {
+    if (!audioCtx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      audioCtx = new AC();
+    }
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    var t = audioCtx.currentTime;
+    var notes = {
+      perfect:    [880, 1318], good: [523], weak: [196],
+      levelup:    [523, 659, 784, 1046], defeat: [784, 659, 523, 392, 262],
+      settlement: [392, 523, 659], quest: [659, 880], buy: [440, 660],
+      mech:       [220, 185], enrage: [147, 147, 110]
+    }[kind] || [440];
+    notes.forEach(function(f, i){
+      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = kind === "weak" || kind === "enrage" ? "sawtooth" : "triangle";
+      o.frequency.value = f;
+      var start = t + i * 0.07;
+      g.gain.setValueAtTime(0.0001, start);
+      g.gain.exponentialRampToValueAtTime(0.11, start + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, start + 0.22);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(start); o.stop(start + 0.25);
+    });
+  } catch(e){ /* sound is decoration; never break the game for it */ }
+}
+
+/* ---------------- save state (v2) ---------------- */
+function bossMemory(s, i){
+  var key = String(i);
+  if (!s.bossMem || typeof s.bossMem !== "object") s.bossMem = {};
+  if (!s.bossMem[key]) s.bossMem[key] = { beaten: 0, lastKiller: null, bestHit: 0, scarRound: null };
+  return s.bossMem[key];
+}
 function defaultState(){
   return {
-    v: 1,
+    v: 2,
     bossIndex: 0,
     bossCycle: 0,
     bossHp: BOSSES[0].hp,
+    bossShield: 0,
+    mechUntil: 0,
+    mechArmed66: true,
+    mechArmed33: true,
+    engagedRound: null,
+    enrageStacks: 0,
     weekKey: null,
     energy: 10,
     energyAcc: 0,
     xp: 0,
     level: 1,
-    stats: { attacks: 0, perfects: 0, playerDamage: 0, hamsterDamage: 0, bossesBeaten: 0 },
+    tokens: 0,
+    tokensSpent: 0,
+    tokensFromPass: 0,
+    upgrades: { power: 0, battery: 0, focus: 0, fortune: 0 },
+    companion: "pip",
+    comboBestSession: 0,
+    surge: 0,
+    witnessedMeters: 0,
+    stats: { attacks: 0, perfects: 0, playerDamage: 0, hamsterDamage: 0, bossesBeaten: 0,
+             bestCombo: 0, surgeDischarged: 0, questDays: 0, focusUses: 0 },
     badges: [],
+    bossMem: {},
+    quests: { day: null, list: [], bonusClaimed: false, lastSettledSeen: null },
     focusReadyAt: 0,
     lastSeen: 0,
     lastDistanceMm: null,
+    lastEpoch: null,
     lastSettled: null,
     sessionHamDamage: 0,
-    totalVisits: 0
+    totalVisits: 0,
+    soundOn: true
   };
 }
 var S = defaultState();
 function save(){
   S.lastSeen = Date.now();
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch(e){}
+  try { localStorage.setItem(SAVE_KEY_V2, JSON.stringify(S)); } catch(e){}
+}
+function normalizeState(d){
+  var base = defaultState();
+  for (var k in base) { if (d[k] !== undefined) base[k] = d[k]; }
+  var bs = defaultState().stats;
+  for (var sk in bs) { if (!base.stats || base.stats[sk] === undefined) { base.stats = base.stats || {}; base.stats[sk] = bs[sk]; } }
+  var bu = defaultState().upgrades;
+  for (var uk in bu) { if (!base.upgrades || base.upgrades[uk] === undefined) { base.upgrades = base.upgrades || {}; base.upgrades[uk] = bu[uk]; } }
+  if (base.bossIndex < 0 || base.bossIndex >= BOSSES.length) base.bossIndex = 0;
+  return base;
 }
 function load(){
   try {
-    var raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return false;
-    var d = JSON.parse(raw);
-    if (!d || typeof d !== "object" || !d.stats) return false;
-    var base = defaultState();
-    for (var k in base) { if (d[k] !== undefined) base[k] = d[k]; }
-    S = base;
-    return true;
-  } catch(e){ return false; }
+    var raw = localStorage.getItem(SAVE_KEY_V2);
+    if (raw) {
+      var d = JSON.parse(raw);
+      if (d && typeof d === "object" && d.stats) { S = normalizeState(d); return "v2"; }
+    }
+    var raw1 = localStorage.getItem(SAVE_KEY_V1);
+    if (raw1) {
+      var d1 = JSON.parse(raw1);
+      if (d1 && typeof d1 === "object" && d1.stats) {
+        var keep = ["bossIndex","bossCycle","bossHp","weekKey","energy","energyAcc","xp","level",
+                    "stats","badges","focusReadyAt","lastSeen","lastDistanceMm","lastSettled",
+                    "sessionHamDamage","totalVisits"];
+        var merged = defaultState();
+        keep.forEach(function(k){ if (d1[k] !== undefined) merged[k] = d1[k]; });
+        S = normalizeState(merged);
+        return "v1-migrated";
+      }
+    }
+  } catch(e){}
+  return false;
 }
 
 /* ---------------- helpers ---------------- */
@@ -386,6 +772,7 @@ function num(x, fallback){
 }
 function fmt(n){ return Math.round(n).toLocaleString("en-US"); }
 function nowSec(){ return Date.now() / 1000; }
+function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 function isoWeekKey(d){
   var date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   var dayNum = (date.getUTCDay() + 6) % 7;
@@ -396,15 +783,26 @@ function isoWeekKey(d){
   var week = 1 + Math.round((date - firstThursday) / (7 * 24 * 3600 * 1000));
   return date.getUTCFullYear() + "-W" + ("0" + week).slice(-2);
 }
+function reducedMotion(){
+  try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch(e){ return false; }
+}
+
+/* ---------------- derived stats ---------------- */
 function bossMaxHp(){
   var b = BOSSES[S.bossIndex];
   return Math.round(b.hp * (1 + 0.5 * S.bossCycle));
 }
-function energyCap(){ return 10 + 2 * (S.level - 1); }
-function baseDamage(){ return 10 + 3 * (S.level - 1); }
+function energyCap(){ return 10 + 2 * (S.level - 1) + 2 * (S.upgrades.battery || 0); }
+function baseDamage(){ return 10 + 3 * (S.level - 1) + 2 * (S.upgrades.power || 0); }
+function focusCooldownMs(){ return Math.max(8000, 20000 - 3000 * (S.upgrades.focus || 0)); }
 function xpForNext(level){ return 100 * level; }
+function mechActive(){ return Date.now() < S.mechUntil; }
+function attackCost(){ return (mechActive() && BOSSES[S.bossIndex].mech.id === "deepfreeze") ? 2 : 1; }
+</script>
 
-/* ---------------- live data ---------------- */
+<script>
+"use strict";
+/* ================= live data ================= */
 var live = {
   ok: false,
   lastOkAt: 0,
@@ -414,8 +812,15 @@ var live = {
   distanceMm: 0,
   settledThrough: 0,
   blockHeight: 0,
-  nextSettleAt: 0
+  nextSettleAt: 0,
+  raw: null,            /* last /status measurement, for the reviewer proof panel */
+  counterEpoch: null,
+  lastStatusAt: 0,
+  lastSettlePollAt: 0
 };
+var timelineData = null;   /* last /settlements?range=7d payload */
+var statsData = null;      /* last /measurement/stats payload */
+var econData = null;       /* last /economy/state payload */
 
 function fetchJson(url){
   return fetch(url, { cache: "no-store" }).then(function(r){
@@ -424,10 +829,55 @@ function fetchJson(url){
   });
 }
 
+/* ---------- daily quests engine ---------- */
+function ensureQuests(){
+  var today = utcDayKey(new Date());
+  if (S.quests.day !== today) {
+    var hadYesterday = S.quests.day !== null && S.quests.list.length > 0;
+    var allDone = hadYesterday && S.quests.list.every(function(q){ return q.done; });
+    if (allDone) S.stats.questDays += 1;
+    S.quests = { day: today, list: freshQuests(today), bonusClaimed: false,
+                 lastSettledSeen: null, roundsPlayed: [], distanceToday: 0 };
+    if (hadYesterday) addLog("quest", "A new UTC day — fresh daily quests are on the board.");
+  }
+  if (!Array.isArray(S.quests.roundsPlayed)) S.quests.roundsPlayed = [];
+  if (typeof S.quests.distanceToday !== "number") S.quests.distanceToday = 0;
+}
+function questProgress(id, amount){
+  ensureQuests();
+  var changed = false;
+  S.quests.list.forEach(function(q){
+    if (q.id === id && !q.done) {
+      q.progress = Math.min(questDef(id).target, q.progress + amount);
+      if (q.progress >= questDef(id).target) {
+        q.done = true;
+        S.tokens += 1;
+        gainXp(50, true);
+        addLog("quest", "Quest complete: <b>" + questDef(id).name + "</b> — +1 Raid Token, +50 XP.");
+        compEvent("quest");
+        sfx("quest");
+      }
+      changed = true;
+    }
+  });
+  if (changed) {
+    if (!S.quests.bonusClaimed && S.quests.list.every(function(q){ return q.done; })) {
+      S.quests.bonusClaimed = true;
+      S.tokens += 1;
+      addLog("quest", "All three daily quests done — <b>bonus +1 Raid Token</b>. The wheel provides for those who watch it.");
+    }
+    save();
+    renderSide();
+  }
+}
+
+/* ---------- status (10 s) ---------- */
 function applyStatus(d){
   if (!d || typeof d !== "object") return;
   var m = d.measurement || {};
   var anchor = (d.builder && d.builder.anchor) || {};
+  live.raw = m;
+  live.lastStatusAt = Date.now();
   var rpm = num(m.rpmMilli) / 1000;
   var speed = num(m.speedMmPerSecond);
   var dist = num(m.distanceMm, live.distanceMm);
@@ -441,46 +891,102 @@ function applyStatus(d){
   if (anchor.settledThroughRound !== undefined) live.settledThrough = num(anchor.settledThroughRound, live.settledThrough);
   if (anchor.blockHeight !== undefined) live.blockHeight = num(anchor.blockHeight, live.blockHeight);
 
-  /* Energy from real distance gained while playing */
+  /* Counter-epoch guard: if the API's distance counter restarts, re-baseline
+     instead of crediting a teleporting hamster. */
+  var epoch = (typeof m.counterEpoch === "string" && m.counterEpoch) ? m.counterEpoch : null;
+  if (epoch) live.counterEpoch = epoch;
+  if (epoch && S.lastEpoch && epoch !== S.lastEpoch) {
+    S.lastDistanceMm = dist;
+    addLog("wheel", "The wheel counter rolled to a new epoch — distance baseline reset, no free metres.");
+  }
+  if (epoch) S.lastEpoch = epoch;
+
+  /* Energy + witnessed metres from real distance gained while playing */
   if (S.lastDistanceMm !== null && dist > S.lastDistanceMm) {
     var gainedMeters = (dist - S.lastDistanceMm) / 1000;
-    S.energyAcc += gainedMeters / METERS_PER_ENERGY;
+    var mult = (S.companion === "mochi") ? 1.2 : 1.0;
+    S.witnessedMeters += gainedMeters;
+    ensureQuests();
+    S.quests.distanceToday += gainedMeters;
+    S.quests.list.forEach(function(q){
+      if (q.id === "distance" && !q.done) {
+        q.progress = Math.min(questDef("distance").target, Math.floor(S.quests.distanceToday));
+        if (q.progress >= questDef("distance").target) {
+          q.done = true; S.tokens += 1; gainXp(50, true);
+          addLog("quest", "Quest complete: <b>Pace Witness</b> — +1 Raid Token, +50 XP.");
+          compEvent("quest"); sfx("quest");
+        }
+      }
+    });
+    if (!S.quests.bonusClaimed && S.quests.list.length > 0 && S.quests.list.every(function(q){ return q.done; })) {
+      S.quests.bonusClaimed = true;
+      S.tokens += 1;
+      addLog("quest", "All three daily quests done — <b>bonus +1 Raid Token</b>. The wheel provides for those who watch it.");
+    }
+    /* Wheel Pass tier-ups */
+    var beforeTiers = S.tokensFromPass;
+    var shouldHave = Math.max(0, passTierCount(S.witnessedMeters) - 1);
+    if (shouldHave > beforeTiers) {
+      var gained = shouldHave - beforeTiers;
+      S.tokensFromPass = shouldHave;
+      S.tokens += gained;
+      addLog("pass", "Wheel Pass tier reached: <b>" + passTitle(S.witnessedMeters) + "</b> (" + fmt(S.witnessedMeters) + " m witnessed) — +" + gained + " Raid Token" + (gained > 1 ? "s" : "") + ".");
+      compEvent("pass");
+      sfx("quest");
+    }
+    S.energyAcc += (gainedMeters / METERS_PER_ENERGY) * mult;
     var whole = Math.floor(S.energyAcc);
     if (whole > 0) {
       var before = S.energy;
       S.energy = Math.min(energyCap(), S.energy + whole);
       S.energyAcc -= whole;
       if (S.energy <= before) S.energyAcc = Math.min(S.energyAcc, 0.99); /* cap banked fraction while full */
-      if (S.energy > before) pipEvent("energy");
+      if (S.energy > before) compEvent("energy");
     }
   }
   if (dist > 0) S.lastDistanceMm = dist;
   live.distanceMm = dist;
+
+  checkEnrage();
   save();
   renderLive();
+  renderSide();
+  renderProof();
 }
 
+/* ---------- settlements (60 s poll, 24 h feed) ---------- */
 function applySettlements(d){
   if (!d || !Array.isArray(d.recentSettlements)) return;
-  var list = d.recentSettlements.slice().sort(function(a,b){
+  live.lastSettlePollAt = Date.now();
+  var list = d.recentSettlements.slice().sort(function(a, b){
     return num(a.settledThroughRound) - num(b.settledThroughRound);
   });
   if (!list.length) return;
 
-  /* countdown estimate from the newest settlement timestamp */
   var newest = list[list.length - 1];
-  var ts = num(newest.blockTimestamp);
-  if (ts > 0) {
-    if (ts > 1e12) ts = ts / 1000;               /* ms → s */
-    live.nextSettleAt = ts + ROUND_SECONDS;
-  }
+  var tsRaw = newest.blockTimestamp;
+  var ts = (typeof tsRaw === "string" && isNaN(parseFloat(tsRaw)))
+    ? (Date.parse(tsRaw) / 1000) : num(tsRaw);   /* API sends ISO strings */
+  if (ts > 1e12) ts = ts / 1000;                 /* ms → s */
+  if (ts > 0) live.nextSettleAt = ts + ROUND_SECONDS;
+  if (newest.settledThroughRound !== undefined) live.settledThrough = Math.max(live.settledThrough, num(newest.settledThroughRound));
 
   var maxSettled = num(newest.settledThroughRound);
-  if (S.lastSettled === null) {           /* first sight: set baseline, no retro damage */
+  if (S.lastSettled === null) {           /* first sight: baseline only, no retro damage */
     S.lastSettled = maxSettled;
     save();
     return;
   }
+
+  /* daily witness quest: settlements that landed since our last look today */
+  ensureQuests();
+  if (S.quests.lastSettledSeen === null) {
+    S.quests.lastSettledSeen = maxSettled;
+  } else if (maxSettled > S.quests.lastSettledSeen) {
+    questProgress("witness", maxSettled - S.quests.lastSettledSeen);
+    S.quests.lastSettledSeen = maxSettled;
+  }
+
   var totalWork = 0, roundsCovered = [], txHash = "";
   list.forEach(function(b){
     var through = num(b.settledThroughRound);
@@ -492,16 +998,27 @@ function applySettlements(d){
     }
   });
   if (totalWork > 0) {
-    var dmg = Math.round(totalWork * 2);
+    var surgeUsed = S.surge;
+    var dmg = Math.round(totalWork * 2 * (1 + 0.2 * surgeUsed));
     S.lastSettled = maxSettled;
     S.stats.hamsterDamage += dmg;
     S.sessionHamDamage += dmg;
-    addLog("hamster", "Squeektoshi dealt <b>" + fmt(dmg) + "</b> raid damage from settled round(s) " +
-      roundsCovered.join(", ") + " (" + fmt(totalWork) + " wheel passes × 2)." +
-      (txHash ? ' <a href="https://sepolia.etherscan.io/tx/' + txHash + '" target="_blank" rel="noopener">Settlement tx</a>' : ""));
+    if (surgeUsed > 0) {
+      S.stats.surgeDischarged += surgeUsed;
+      addLog("hamster", "Squeektoshi dealt <b>" + fmt(dmg) + "</b> raid damage from settled round(s) " +
+        roundsCovered.join(", ") + " (" + fmt(totalWork) + " wheel passes × 2" +
+        ", Surge ×" + surgeUsed + " amplified it by " + (surgeUsed * 20) + "%)." +
+        (txHash ? ' <a href="https://sepolia.etherscan.io/tx/' + txHash + '" target="_blank" rel="noopener">Settlement tx</a>' : ""));
+      S.surge = 0;
+    } else {
+      addLog("hamster", "Squeektoshi dealt <b>" + fmt(dmg) + "</b> raid damage from settled round(s) " +
+        roundsCovered.join(", ") + " (" + fmt(totalWork) + " wheel passes × 2)." +
+        (txHash ? ' <a href="https://sepolia.etherscan.io/tx/' + txHash + '" target="_blank" rel="noopener">Settlement tx</a>' : ""));
+    }
     floater(dmg, "hamster", "Squeektoshi +" + fmt(dmg));
+    sfx("settlement");
     damageBoss(dmg, true);
-    pipEvent("hamsterHit");
+    compEvent("hamsterHit");
     checkBadges();
     save();
     renderAll();
@@ -509,75 +1026,197 @@ function applySettlements(d){
     S.lastSettled = maxSettled;
     save();
   }
+  renderProof();
 }
 
-function pollStatus(){
-  fetchJson(API_STATUS).then(applyStatus).catch(function(){ renderLive(); });
-}
-function pollSettlements(){
-  fetchJson(API_SETTLE).then(applySettlements).catch(function(){});
+/* ---------- slow feeds: timeline / almanac / economy ---------- */
+function applySettlements7d(d){ if (d && Array.isArray(d.recentSettlements)) { timelineData = d; renderTimeline(); } }
+function applyStats(d){ if (d && typeof d === "object") { statsData = d; renderAlmanac(); } }
+function applyEcon(d){ if (d && typeof d === "object") { econData = d; renderEcon(); } }
+
+function pollStatus(){ fetchJson(API_STATUS).then(applyStatus).catch(function(){ renderLive(); renderProof(); }); }
+function pollSettlements(){ fetchJson(API_SETTLE).then(applySettlements).catch(function(){}); }
+function pollSlow(){
+  fetchJson(API_SETTLE7).then(applySettlements7d).catch(function(){});
+  fetchJson(API_STATS).then(applyStats).catch(function(){});
+  fetchJson(API_ECON).then(applyEcon).catch(function(){});
 }
 
-/* ---------------- combat ---------------- */
+/* ================= boss mechanics ================= */
+function maybeTriggerMech(){
+  if (S.bossHp <= 0 || mechActive()) return;
+  var frac = S.bossHp / bossMaxHp();
+  var which = null;
+  if (frac <= 0.66 && S.mechArmed66) { which = "66%"; S.mechArmed66 = false; }
+  else if (frac <= 0.33 && S.mechArmed33) { which = "33%"; S.mechArmed33 = false; }
+  if (!which) return;
+  var b = BOSSES[S.bossIndex];
+  S.mechUntil = Date.now() + MECH_SECONDS * 1000;
+  if (b.mech.id === "dustshield") {
+    S.bossShield = Math.round(bossMaxHp() * 0.12);
+  }
+  addLog("mech", "<b>" + b.name + "</b> unleashes <b>" + b.mech.name + "</b> at " + which + " HP! " + b.mech.desc);
+  compEvent("mech");
+  sfx("mech");
+}
+
+function checkEnrage(){
+  var b = BOSSES[S.bossIndex];
+  if (S.engagedRound === null || live.settledThrough <= 0 || S.bossHp <= 0) return;
+  var deadline = S.engagedRound + b.rounds * (S.enrageStacks + 1);
+  if (live.settledThrough > deadline) {
+    S.enrageStacks += 1;
+    var heal = Math.round(bossMaxHp() * 0.15);
+    S.bossHp = Math.min(bossMaxHp(), S.bossHp + heal);
+    addLog("enrage", "<b>" + b.name + " ENRAGES</b> (stack " + S.enrageStacks + ") — it heals " + fmt(heal) +
+      " HP and its armour thickens (−10% damage taken per stack). The wheel does not wait, and neither does he.");
+    compEvent("enrage");
+    sfx("enrage");
+    save();
+    renderAll();
+  }
+}
+function enrageDamageMult(){ return Math.pow(0.9, S.enrageStacks); }
+
+/* ================= combat ================= */
 var marker = { pos: 0, dir: 1, speed: 95 };  /* % per second */
 var lastFrame = 0;
+var combo = { count: 0, lastPerfectAt: 0, lastAttackAt: 0 };
+var freezeUntil = 0, nextFreezeAt = 0, nextFlipCheckAt = 0;
 
-function perfectHalfWidth(){ return live.running ? 7 : 4; }
+function perfectHalfWidth(){
+  var p = live.running ? 7 : 4;
+  if (S.companion === "pip") p += 1;
+  if (mechActive() && BOSSES[S.bossIndex].mech.id === "deepfreeze") p = Math.max(2, p - 2);
+  return p;
+}
 function goodHalfWidth(){ return 16; }
+function comboMult(){
+  return Math.min(2, 1 + 0.1 * combo.count);
+}
+function comboAlive(){
+  return combo.count > 0 && (Date.now() - combo.lastAttackAt) < 4000;
+}
 
 function layoutZones(){
   var p = perfectHalfWidth(), g = goodHalfWidth();
   var zp = $("zonePerfect"), zg = $("zoneGood");
   zp.style.left = (50 - p) + "%"; zp.style.width = (2 * p) + "%";
   zg.style.left = (50 - g) + "%"; zg.style.width = (2 * g) + "%";
+  var hint = $("perfectHint");
+  if (hint) hint.innerHTML = "Every 25 m the real wheel turns earns you +1 Energy. Perfect = the centre ±" + p +
+    "% of the bar" + (live.running ? " (widened — Squeektoshi is running)" : "") +
+    ". Chain Perfects to build a combo — damage grows up to ×2, and Perfects landed at combo ×3 or higher bank <b>Surge</b> charges that amplify the hamster's next settlement strike.";
 }
 
 function frameLoop(t){
   if (!lastFrame) lastFrame = t;
   var dt = Math.min(0.05, (t - lastFrame) / 1000);
   lastFrame = t;
-  marker.pos += marker.dir * marker.speed * dt;
+  var speed = marker.speed;
+  if (mechActive()) {
+    var mid = BOSSES[S.bossIndex].mech.id;
+    if (mid === "photosynthesis") speed *= 1.35;
+    if (mid === "drowse") {
+      var now = Date.now();
+      if (!nextFreezeAt) nextFreezeAt = now + 1500;
+      if (now >= nextFreezeAt && now >= freezeUntil) { freezeUntil = now + 700; nextFreezeAt = now + 4000; }
+      if (now < freezeUntil) speed = 0;
+    }
+    if (mid === "reverse") {
+      var now2 = Date.now();
+      if (!nextFlipCheckAt) nextFlipCheckAt = now2 + 1000;
+      if (now2 >= nextFlipCheckAt) {
+        if (Math.random() < 0.45) marker.dir *= -1;
+        nextFlipCheckAt = now2 + 1400;
+      }
+    }
+  }
+  marker.pos += marker.dir * speed * dt;
   if (marker.pos >= 100) { marker.pos = 100; marker.dir = -1; }
   if (marker.pos <= 0)   { marker.pos = 0;   marker.dir = 1; }
-  $("marker").style.left = marker.pos + "%";
-  drawWheel(dt);
+  var mk = $("marker");
+  mk.style.left = marker.pos + "%";
+  mk.classList.toggle("frozen", speed === 0 && mechActive());
+  if (document.body.classList.contains("overlay")) drawWheel(dt, $("ovCanvas"));
+  else drawWheel(dt);
   requestAnimationFrame(frameLoop);
 }
 
 function attack(){
   if (S.bossHp <= 0) return;
-  if (S.energy < 1) {
-    pipSay(pick([
-      "Out of energy! The wheel earns more — or hit Focus and catch your breath.",
-      "No energy, no swing. Watch the wheel: every 25 m is another strike.",
-      "Empty tank! Squeektoshi is literally doing cardio so you can fight. Give it a second."
-    ]));
-    shake();
+  var cost = attackCost();
+  if (S.energy < cost) {
+    compSay(pick(compLines("noEnergy")));
+    shakeIt();
     return;
   }
-  S.energy -= 1;
+  S.energy -= cost;
   S.stats.attacks += 1;
+  combo.lastAttackAt = Date.now();
+
+  /* quest: fighting in distinct rounds */
+  if (live.settledThrough > 0) {
+    ensureQuests();
+    var roundNow = live.settledThrough + 1;
+    if (S.quests.roundsPlayed.indexOf(roundNow) === -1) {
+      S.quests.roundsPlayed.push(roundNow);
+      var q = null;
+      S.quests.list.forEach(function(x){ if (x.id === "rounds") q = x; });
+      if (q && !q.done) questProgress("rounds", 1);
+    }
+  }
+
   var dist = Math.abs(marker.pos - 50);
   var p = perfectHalfWidth(), g = goodHalfWidth();
-  var dmg, kind, label;
+  var dmg, kind, label = "";
+  var runningNow = live.ok && live.running;
   if (dist <= p) {
     kind = "perfect";
-    var mega = live.running && Math.random() < 0.5;
-    dmg = Math.round(baseDamage() * (mega ? 5 : 3));
+    combo.count += 1;
+    combo.lastPerfectAt = Date.now();
+    if (combo.count > S.stats.bestCombo) S.stats.bestCombo = combo.count;
+    var megaChance = 0.5 + 0.05 * (S.upgrades.fortune || 0);
+    var mega = runningNow && Math.random() < megaChance;
+    dmg = Math.round(baseDamage() * (mega ? 5 : 3) * comboMult());
     label = mega ? "MEGA CRIT " : "PERFECT ";
     S.stats.perfects += 1;
-    shake();
+    questProgress("perfects", 1);
+    if (combo.count >= 3 && S.surge < 5) {
+      S.surge += 1;
+      label += "· SURGE BANKED ";
+    }
+    shakeIt();
+    sfx("perfect");
   } else if (dist <= g) {
-    kind = "good"; dmg = baseDamage(); label = "";
+    kind = "good";
+    dmg = baseDamage();
+    if (S.companion === "captain") dmg = Math.round(dmg * 1.15);
+    combo.count = 0;
+    sfx("good");
   } else {
-    kind = "weak"; dmg = Math.max(1, Math.round(baseDamage() * 0.4)); label = "";
+    kind = "weak";
+    dmg = Math.max(1, Math.round(baseDamage() * 0.4));
+    combo.count = 0;
+    sfx("weak");
   }
+  /* Guard: while a signature move runs (Dust Shield is the exception — it
+     absorbs instead), Good hits glance for 25% and Weak hits glance off. */
+  var guarded = false;
+  if (mechActive() && BOSSES[S.bossIndex].mech.id !== "dustshield" && kind !== "perfect") {
+    dmg = (kind === "good") ? Math.max(1, Math.round(dmg * 0.25)) : 0;
+    guarded = true;
+  }
+  dmg = (dmg === 0) ? 0 : Math.max(1, Math.round(dmg * enrageDamageMult()));
   S.stats.playerDamage += dmg;
-  gainXp(dmg);
-  floater(dmg, kind, label + fmt(dmg));
+  if (runningNow) questProgress("rundmg", dmg);
+  gainXp(dmg, false);
+  floater(dmg, kind, guarded ? ("GUARDED " + fmt(dmg)) : (label + fmt(dmg)));
   damageBoss(dmg, false);
-  if (kind === "perfect") pipEvent("perfect");
-  else if (kind === "weak") pipEvent("weak");
+  if (Date.now() - lastDefeatStamp > 60) {   /* don't talk over a victory line */
+    if (kind === "perfect") compEvent("perfect");
+    else if (kind === "weak") compEvent("weak");
+  }
   checkBadges();
   save();
   renderAll();
@@ -585,35 +1224,61 @@ function attack(){
 
 function damageBoss(dmg, fromHamster){
   if (S.bossHp <= 0) return;
+  /* Dust shield absorbs first (settlement strikes ignore it — the chain hits the boss, not the lint) */
+  if (!fromHamster && S.bossShield > 0) {
+    var absorbed = Math.min(S.bossShield, dmg);
+    S.bossShield -= absorbed;
+    dmg -= absorbed;
+    if (dmg <= 0) { renderAll(); return; }
+  }
   S.bossHp = Math.max(0, S.bossHp - dmg);
+  var mem = bossMemory(S, S.bossIndex);
+  if (dmg > mem.bestHit) mem.bestHit = dmg;
+  maybeTriggerMech();
   if (S.bossHp <= 0) defeatBoss(fromHamster);
+  else renderAll();
 }
 
+var lastDefeatStamp = 0;
 function defeatBoss(fromHamster){
   var b = BOSSES[S.bossIndex];
+  lastDefeatStamp = Date.now();
   S.stats.bossesBeaten += 1;
+  S.tokens += 1;
+  var mem = bossMemory(S, S.bossIndex);
+  mem.beaten += 1;
+  mem.lastKiller = fromHamster ? "Squeektoshi" : "you";
+  mem.scarRound = live.settledThrough > 0 ? live.settledThrough : mem.scarRound;
   addLog("boss", "<b>" + b.name + "</b> has been defeated!" +
     (fromHamster ? " Squeektoshi landed the finishing blow." : " You landed the finishing blow.") +
-    " Badge earned, next boss incoming.");
-  pipSay("Down! " + b.name + " is DONE. " +
-    (fromHamster ? "And the hamster got the last hit in. Show-off." : "Beautiful work, raider.") +
-    " Next boss rolls in… now.");
+    " +1 Raid Token. He will remember this — check the scar.");
+  compSay(pick(compLines("victory")).replace("{boss}", b.name));
+  sfx("defeat");
   S.bossIndex += 1;
   if (S.bossIndex >= BOSSES.length) { S.bossIndex = 0; S.bossCycle += 1; }
   S.bossHp = bossMaxHp();
+  S.bossShield = 0;
+  S.mechArmed66 = true; S.mechArmed33 = true;
+  S.mechUntil = 0;
+  S.engagedRound = live.settledThrough > 0 ? live.settledThrough : null;
+  S.enrageStacks = 0;
+  freezeUntil = 0; nextFreezeAt = 0; nextFlipCheckAt = 0;
   checkBadges();
 }
 
-function gainXp(amount){
+function gainXp(amount, silent){
   S.xp += amount;
   var need = xpForNext(S.level);
   while (S.xp >= need) {
     S.xp -= need;
     S.level += 1;
     S.energy = energyCap();
-    addLog("level", "Level up! You are now level <b>" + S.level + "</b>. Energy cap " + energyCap() +
-      ", base damage " + baseDamage() + ", energy refilled.");
-    pipSay("Level " + S.level + "! Bigger energy tank, heavier hits. The bosses are nervous. They should be.");
+    if (!silent) {
+      addLog("level", "Level up! You are now level <b>" + S.level + "</b>. Energy cap " + energyCap() +
+        ", base damage " + baseDamage() + ", energy refilled.");
+      compEvent("levelup");
+    }
+    sfx("levelup");
     need = xpForNext(S.level);
   }
 }
@@ -621,10 +1286,14 @@ function gainXp(amount){
 function focus(){
   var now = Date.now();
   if (now < S.focusReadyAt) return;
-  if (S.energy >= energyCap()) { pipSay("Energy's full already. Go spend it on a boss!"); return; }
-  S.energy += 1;
-  S.focusReadyAt = now + 20000;
-  pipEvent("focus");
+  if (S.energy >= energyCap()) { compSay("Energy's full already. Go spend it on a boss!"); return; }
+  var amount = (S.companion === "mochi") ? 2 : 1;
+  S.energy = Math.min(energyCap(), S.energy + amount);
+  S.focusReadyAt = now + focusCooldownMs() + (S.companion === "mochi" ? 5000 : 0);
+  S.stats.focusUses += 1;
+  questProgress("focus", 1);
+  compEvent("focus");
+  sfx("good");
   save();
   renderAll();
 }
@@ -638,71 +1307,130 @@ function checkBadges(){
     }
   });
 }
+</script>
 
-/* ---------------- Pip, the sidekick with a memory ---------------- */
-var pipTimer = 0;
-function pipSay(text){
-  $("pipText").textContent = text;
-  pipTimer = Date.now();
+<script>
+"use strict";
+/* ================= companions =================
+   Three voices, three real buffs. Pip is morale (wider Perfect window),
+   Mochi is the wheel's appetite (faster Energy, stronger Focus),
+   Captain Crumb is discipline (stronger Good hits). */
+var COMPANIONS = {
+  pip: {
+    name: "Pip",
+    buff: "Morale: your Perfect window is +1% wider, always. Pip believes in you, loudly.",
+    lines: {
+      greetingFirst: ["First raid? Perfect. I'm Pip. The hamster up top is Squeektoshi — real wheel, real running, real damage. Time your strikes in the gold, and let's flatten some bosses."],
+      greetingBack: ["Raider returns! Career totals: {pdmg} damage by you, {hdmg} by the hamster. Solid duo."],
+      greetingLong: ["You're back! {days} day(s) away — the bosses held a little party. Rude. {boss} is still waiting at {hp} HP."],
+      perfect: ["PERFECT! Right in the gold. I felt that in my whiskers.", "Textbook! Frame-perfect. The boss is reconsidering its life choices.", "Ooh, clean! Do it again. And again. Forever, ideally."],
+      weak: ["A graze. The boss sends its regards and a small bruise.", "Edge hit. Counts! Barely. Aim for the shiny bit next time.", "That was… a warm-up swing. Yes. Let's call it that."],
+      noEnergy: ["Out of energy! The wheel earns more — or hit Focus and catch your breath.", "No energy, no swing. Watch the wheel: every 25 m is another strike.", "Empty tank! Squeektoshi is literally doing cardio so you can fight. Give it a second."],
+      hamsterHit: ["The hamster just hit the boss FOR you. Settled rounds are no joke.", "Squeektoshi damage, straight from the chain. He doesn't even know. Legend.", "See that blue number? That's the wheel fighting back."],
+      energy: ["Energy up! The wheel provides.", "25 metres well spent. One more swing in the tank."],
+      focus: ["Deep breath. Focus sipped. Back to work.", "Mind over matter. Mostly over the boss's face, shortly."],
+      victory: ["Down! {boss} is DONE. Beautiful work, raider. Next boss rolls in… now.", "{boss}, flattened. I'm putting this on the trophy shelf. It's a small shelf. But it's ours."],
+      levelup: ["Level up! Bigger energy tank, heavier hits. The bosses are nervous. They should be."],
+      quest: ["Quest done! The wheel provides for those who watch it. Tokens well earned."],
+      pass: ["Wheel Pass tier! Every metre of that was a real metre. I counted. Twice."],
+      mech: ["Signature move! Read the banner, raider — this is where raids get interesting."],
+      enrage: ["He ENRAGED. That's what dawdling gets us. Hit him harder — and faster."],
+      running: ["Hear that? That's the wheel at {rpm} RPM. Squeektoshi is FEELING it. Your Perfect window is fat right now.", "He's running! Every metre he covers is energy in your pocket. 25 metres a strike — do the maths, then do the violence.", "Live wheel, live buffs. This is the part where we look extremely professional."],
+      napping: ["He's napping. Again. Honestly? Respect. Even legends schedule their rest days.", "Wheel's still. Energy's paused, but Focus keeps us in the fight.", "Shhh. Squeektoshi is recharging. Champions nap. Bosses, however, should not get comfortable."],
+      lowhp: ["{boss} is wobbling! One or two clean hits — finish this!", "So close! I can see the boss sweating. Or… condensing. Whatever — HIT IT."],
+      idle: ["Welcome to the raid. I'm Pip — logistics, morale, and dramatic gasping.", "Fun fact: Squeektoshi has no idea he's in a boss fight. He's just a hamster doing hamster things. Iconic.", "Bosses remember who beat them now. There's a memory line under the name. We're building a legacy of grudges."]
+    }
+  },
+  mochi: {
+    name: "Mochi",
+    buff: "Wheel appetite: +20% Energy from real distance, and Focus restores 2 Energy (slightly longer cooldown). Mochi snacks on momentum.",
+    lines: {
+      greetingFirst: ["Hiii. Mochi here. I handle snacks and energy. The wheel turns, we eat, you hit things. Simple system. Let's raid."],
+      greetingBack: ["You're back! I kept your seat warm and ate only SOME of the emergency seeds."],
+      greetingLong: ["{days} days! I rationed the seeds. Mostly. {boss} is at {hp} HP and hasn't moved. Lazy."],
+      perfect: ["PERFECT! Crunchy! That one had texture.", "Gold! Right in the snack zone. Delicious hit."],
+      weak: ["A nibble. Bosses require bites, bestie.", "Graze. Even I aim better at a sunflower seed."],
+      noEnergy: ["Tank's empty! Wheel metres are food. Or Focus — I brewed the good stuff.", "No energy! Quick, Focus break. Hydration is a strategy."],
+      hamsterHit: ["The hamster hit him! While running! Multitasking king.", "Blue number! That's wheel-powered violence. My favourite flavour."],
+      energy: ["Energy! Fresh from the wheel. Still warm.", "Metres in, energy out. The economy works."],
+      focus: ["Double sip! Focus hits different when Mochi makes it.", "Breathing… snacking… ready."],
+      victory: ["{boss} is DOWN. Victory snacks at my place. I mean here. It is here."],
+      levelup: ["Level up! You glow now. Like a fresh seed under a heat lamp."],
+      quest: ["Quest complete! I stamped it with a tiny paw. Official."],
+      pass: ["New Wheel Pass tier! I logged every metre in the snack ledger."],
+      mech: ["Ooh, signature move! Spicy. Read the banner, don't panic, snack later."],
+      enrage: ["He's MAD-mad. Enrage mad. Hit faster — snacks taste better after danger."],
+      running: ["Wheel's spinning at {rpm} RPM! That's the sound of snacks becoming energy.", "He runs, we eat, you smash. The food chain is beautiful."],
+      napping: ["Nap time. Even the wheel needs a snack break. Focus keeps us fed.", "Shhh. Dreaming of seeds, probably. Champions dream big."],
+      lowhp: ["{boss} is at crumbs-level HP! Finish him before he regenerates or whatever bosses do!"],
+      idle: ["Mochi's rule: a watched wheel turns faster. Scientifically unproven. Emotionally true.", "Every 25 metres is a strike. I do the maths so you can do the bonking."]
+    }
+  },
+  captain: {
+    name: "Captain Crumb",
+    buff: "Drill discipline: your Good hits deal +15% damage. No sloppy swings on the Captain's watch.",
+    lines: {
+      greetingFirst: ["Captain Crumb, reporting. We run a tight raid here: gold centre, clean combos, no excuses. Squeektoshi handles cardio. You handle violence. Begin."],
+      greetingBack: ["Raider on deck. Career: {pdmg} by you, {hdmg} by the hamster. Acceptable. Continue."],
+      greetingLong: ["{days} days absent. The boss held formation at {hp} HP. We resume the offensive — now."],
+      perfect: ["PERFECT. That is the standard. Maintain it.", "Dead centre. The regiment salutes you.", "Textbook strike. Frame it."],
+      weak: ["A graze. Sloppy. The gold is in the CENTRE, raider.", "Edge hit. We do not celebrate edges here."],
+      noEnergy: ["Energy depleted. Await the wheel or take Focus. Logistics, raider, logistics.", "No swings without energy. The wheel provides — patience is a weapon."],
+      hamsterHit: ["The hamster unit has engaged. Effective fire, straight from the chain.", "Squeektoshi strike confirmed. Unorthodox soldier. Effective soldier."],
+      energy: ["Energy resupplied by the wheel. Spend it well.", "One more strike in the chamber. Courtesy of cardio."],
+      focus: ["Breath controlled. Focus acquired. Resume fire.", "Discipline is a resource. You just banked some."],
+      victory: ["{boss} neutralised. Logged, scarred, remembered. Next target — rolling in."],
+      levelup: ["Promotion earned. Heavier strikes, bigger tank. The regiment grows stronger."],
+      quest: ["Objective complete. Tokens issued. The Captain approves of paperwork that pays."],
+      pass: ["Wheel Pass tier secured. Every metre witnessed is a metre on your record."],
+      mech: ["Signature move incoming! Banner up — adapt and overcome."],
+      enrage: ["ENRAGE confirmed. His armour thickens with every stack. Speed is now a weapon — use it."],
+      running: ["Wheel at {rpm} RPM. Buff window is OPEN. Strike with prejudice.", "The hamster is at full pace. This is our moment, raider."],
+      napping: ["Wheel silent. The hamster rests — champions and soldiers both. Focus rotation, maintain pressure.", "Standby. Conserve, focus, and be ready when he runs."],
+      lowhp: ["{boss} is breaking! Concentrate fire — END IT."],
+      idle: ["Captain's orders: centre gold, chain Perfects, bank Surge, respect the wheel.", "This raid keeps receipts: every boss remembers its defeats. Read the memory line. Fear is a feature."]
+    }
+  }
+};
+function comp(){ return COMPANIONS[S.companion] || COMPANIONS.pip; }
+function compLines(key){ return comp().lines[key] || COMPANIONS.pip.lines[key] || ["…"]; }
+var compTimer = 0;
+function compSay(text){
+  var c = comp();
+  var filled = String(text)
+    .replace("{boss}", BOSSES[S.bossIndex].name)
+    .replace("{hp}", fmt(Math.max(0, S.bossHp)))
+    .replace("{rpm}", live.ok ? live.rpm.toFixed(1) : "0.0")
+    .replace("{pdmg}", fmt(S.stats.playerDamage))
+    .replace("{hdmg}", fmt(S.stats.hamsterDamage));
+  $("pipWho").textContent = c.name + ":";
+  $("pipText").textContent = filled;
+  compTimer = Date.now();
 }
-function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
-
-function pipContextLine(){
+function compEvent(kind){ compSay(pick(compLines(kind))); }
+function compContextLine(){
   var b = BOSSES[S.bossIndex];
   var hpFrac = S.bossHp / bossMaxHp();
-  if (live.ok && live.running) return pick([
-    "Hear that? That's the wheel at " + live.rpm.toFixed(1) + " RPM. Squeektoshi is FEELING it. Your Perfect window is fat right now.",
-    "He's running! Every metre he covers is energy in your pocket. 25 metres a strike — do the maths, then do the violence.",
-    "Live wheel, live buffs. This is the part where we look extremely professional."
-  ]);
-  if (live.ok && !live.running) return pick([
-    "He's napping. Again. Honestly? Respect. Even legends schedule their rest days.",
-    "Wheel's still. Energy's paused, but Focus keeps us in the fight. Twenty seconds a sip.",
-    "Shhh. Squeektoshi is recharging. Champions nap. Bosses, however, should not get comfortable."
-  ]);
-  if (hpFrac < 0.15) return pick([
-    b.name + " is wobbling! One or two clean hits — finish this!",
-    "So close! I can see the boss sweating. Or… condensing. Whatever — HIT IT."
-  ]);
-  if (S.stats.bossesBeaten > 0) return pick([
-    "You've flattened " + S.stats.bossesBeaten + " boss" + (S.stats.bossesBeaten === 1 ? "" : "es") + " with me. We have a whole trophy shelf now. It's a small shelf. But it's ours.",
-    "Career damage report: you " + fmt(S.stats.playerDamage) + ", the hamster " + fmt(S.stats.hamsterDamage) + ". Teamwork makes the raid work."
-  ]);
-  return pick([
-    "Welcome to the raid. I'm Pip — logistics, morale, and dramatic gasping.",
-    "The bar at the bottom? White line stops in the gold — that's a Perfect. Everything else is foreplay.",
-    "Fun fact: Squeektoshi has no idea he's in a boss fight. He's just a hamster doing hamster things. Iconic."
-  ]);
+  if (live.ok && live.running) return pick(compLines("running"));
+  if (live.ok && !live.running) return pick(compLines("napping"));
+  if (hpFrac < 0.15) return pick(compLines("lowhp"));
+  return pick(compLines("idle"));
 }
-
-function pipEvent(kind){
-  if (kind === "perfect") pipSay(pick([
-    "PERFECT! Right in the gold. I felt that in my whiskers.",
-    "Textbook! Frame-perfect. The boss is reconsidering its life choices.",
-    "Ooh, clean! Do it again. And again. Forever, ideally."
-  ]));
-  else if (kind === "weak") pipSay(pick([
-    "A graze. The boss sends its regards and a small bruise.",
-    "Edge hit. Counts! Barely. Aim for the shiny bit next time.",
-    "That was… a warm-up swing. Yes. Let's call it that."
-  ]));
-  else if (kind === "hamsterHit") pipSay(pick([
-    "The hamster just hit the boss FOR you. Settled rounds are no joke.",
-    "Squeektoshi damage, straight from the chain. He doesn't even know. Legend.",
-    "See that blue number? That's the wheel fighting back."
-  ]));
-  else if (kind === "energy") pipSay(pick([
-    "Energy up! The wheel provides.",
-    "25 metres well spent. One more swing in the tank."
-  ]));
-  else if (kind === "focus") pipSay(pick([
-    "Deep breath. Focus sipped. Back to work.",
-    "Mind over matter. Mostly over the boss's face, shortly."
-  ]));
+function compRotate(){ if (Date.now() - compTimer > 9000) compSay(compContextLine()); }
+function setCompanion(id){
+  if (!COMPANIONS[id]) return;
+  S.companion = id;
+  save();
+  renderCompanion();
+  layoutZones();
+  compSay(pick(compLines("idle")));
 }
-
-function pipRotate(){
-  if (Date.now() - pipTimer > 9000) pipSay(pipContextLine());
+function renderCompanion(){
+  ["pip", "mochi", "captain"].forEach(function(id){
+    var btn = $("comp" + id.charAt(0).toUpperCase() + id.slice(1));
+    if (btn) btn.classList.toggle("active", S.companion === id);
+  });
+  $("companionBuff").textContent = comp().buff;
 }
 
 /* ---------------- raid log ---------------- */
@@ -725,13 +1453,14 @@ function renderLog(){
 function floater(dmg, kind, text){
   var el = document.createElement("div");
   el.className = "floater " + kind;
-  el.textContent = (kind === "hamster" ? "" : "-") + (text || fmt(dmg));
-  if (kind === "hamster") el.textContent = text || ("-" + fmt(dmg));
+  el.textContent = (kind === "hamster") ? (text || ("-" + fmt(dmg))) : ("-" + (text || fmt(dmg)));
+  if (kind === "hamster" && text) el.textContent = text;
   el.style.left = (38 + Math.random() * 24) + "%";
   $("arena").appendChild(el);
   setTimeout(function(){ el.remove(); }, 1000);
 }
-function shake(){
+function shakeIt(){
+  if (reducedMotion()) return;
   document.body.classList.remove("shake");
   void document.body.offsetWidth;
   document.body.classList.add("shake");
@@ -740,29 +1469,23 @@ function shake(){
 
 /* ---------------- wheel canvas ---------------- */
 var wheelAngle = 0, zPhase = 0;
-function drawWheel(dt){
-  var cv = $("wheelCanvas");
+function drawWheel(dt, cvOverride){
+  var cv = cvOverride || $("wheelCanvas");
+  if (!cv) return;
   var ctx = cv.getContext("2d");
   var W = cv.width, H = cv.height;
   ctx.clearRect(0, 0, W, H);
-
-  /* backdrop */
   ctx.fillStyle = "#1a140e";
   ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = "#241a10";
   ctx.fillRect(0, H - 44, W, 44);
   ctx.fillStyle = "#31241a";
   for (var i = 0; i < W; i += 26) ctx.fillRect(i, H - 44, 3, 44);
-
   var cx = W / 2, cy = H / 2 - 8, R = 108;
   var spin = live.running ? (live.rpm * Math.PI * 2 / 60) : 0;
   wheelAngle += spin * dt;
-
-  /* stand */
   ctx.strokeStyle = "#5a4630"; ctx.lineWidth = 10;
   ctx.beginPath(); ctx.moveTo(cx - 70, H - 40); ctx.lineTo(cx, cy + 30); ctx.lineTo(cx + 70, H - 40); ctx.stroke();
-
-  /* wheel rim */
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(wheelAngle);
@@ -777,47 +1500,35 @@ function drawWheel(dt){
   ctx.restore();
   ctx.fillStyle = "#ffcf6e";
   ctx.beginPath(); ctx.arc(cx, cy, 13, 0, Math.PI * 2); ctx.fill();
-
   drawHamster(ctx, cx, cy, R);
 }
-
 function px(ctx, x, y, w, h, color){ ctx.fillStyle = color; ctx.fillRect(x, y, w, h); }
-
 function drawHamster(ctx, cx, cy, R){
-  /* pixel hamster riding the bottom-inside of the wheel */
   var run = live.running;
   var bob = run ? Math.abs(Math.sin(wheelAngle * 3)) * 7 : 0;
   var bx = cx - 34, by = cy + R - 62 - bob;
   var fur = "#e8b06a", furD = "#c98d45", cream = "#ffedc9", pink = "#e88ca0", dark = "#14100c";
-
   if (run) {
-    /* body */
     px(ctx, bx, by + 14, 68, 34, fur);
     px(ctx, bx + 6, by + 8, 56, 12, fur);
-    /* head */
     px(ctx, bx + 44, by, 30, 28, fur);
-    px(ctx, bx + 62, by + 12, 14, 10, cream);        /* snout */
-    px(ctx, bx + 70, by + 14, 5, 5, pink);           /* nose */
-    px(ctx, bx + 52, by + 8, 6, 8, dark);            /* eye */
-    px(ctx, bx + 44, by - 8, 14, 12, furD);          /* ear */
+    px(ctx, bx + 62, by + 12, 14, 10, cream);
+    px(ctx, bx + 70, by + 14, 5, 5, pink);
+    px(ctx, bx + 52, by + 8, 6, 8, dark);
+    px(ctx, bx + 44, by - 8, 14, 12, furD);
     px(ctx, bx + 47, by - 5, 8, 6, pink);
-    /* cheek pouch */
     px(ctx, bx + 50, by + 20, 14, 10, cream);
-    /* legs (running) */
     var lp = Math.sin(wheelAngle * 6) > 0 ? 0 : 8;
     px(ctx, bx + 8, by + 46, 14, 10, furD);
     px(ctx, bx + 40 + lp, by + 46, 14, 10, furD);
-    /* tail */
     px(ctx, bx - 6, by + 26, 10, 8, cream);
   } else {
-    /* curled up asleep */
     px(ctx, bx + 2, by + 22, 64, 26, fur);
     px(ctx, bx + 10, by + 14, 48, 14, fur);
-    px(ctx, bx + 44, by + 8, 26, 22, fur);           /* head tucked */
-    px(ctx, bx + 46, by + 2, 12, 10, furD);          /* ear */
-    px(ctx, bx + 52, by + 18, 10, 3, dark);          /* closed eye */
-    px(ctx, bx + 64, by + 24, 6, 4, pink);           /* nose */
-    /* floating Zzz */
+    px(ctx, bx + 44, by + 8, 26, 22, fur);
+    px(ctx, bx + 46, by + 2, 12, 10, furD);
+    px(ctx, bx + 52, by + 18, 10, 3, dark);
+    px(ctx, bx + 64, by + 24, 6, 4, pink);
     zPhase += 0.016;
     ctx.fillStyle = "#a9c8e8";
     ctx.font = "bold 17px system-ui, sans-serif";
@@ -830,7 +1541,7 @@ function drawHamster(ctx, cx, cy, R){
   }
 }
 
-/* ---------------- rendering ---------------- */
+/* ---------------- rendering: live strip ---------------- */
 function renderLive(){
   var fresh = live.ok && (Date.now() - live.lastOkAt < STATUS_MS * 2.5);
   var dot = $("liveDot"), txt = $("liveText");
@@ -846,34 +1557,64 @@ function renderLive(){
   }
   document.body.classList.toggle("buffed", fresh && live.running);
   document.body.classList.toggle("napping", fresh && !live.running && live.ok);
-
+  document.body.classList.toggle("surge-banked", S.surge > 0);
+  var sb = $("surgeBanner");
+  if (sb && S.surge > 0) sb.textContent = "Surge banked ×" + S.surge + " — Squeektoshi's next settlement strike hits +" + (S.surge * 20) + "% harder.";
   $("stDistance").innerHTML = live.ok ? (live.distanceMm / 1e6).toFixed(3) + " <small>km</small>" : "—";
   $("stSpeed").innerHTML = live.ok ? (live.speedMmS * 0.0036).toFixed(2) + " <small>km/h</small>" : "—";
-  $("stRpm").textContent = live.ok ? live.rpm.toFixed(1) : "—";
-  $("stRound").textContent = live.ok ? ("#" + (live.settledThrough + 1)) : "—";
+  $("stRpm").innerHTML = live.ok ? live.rpm.toFixed(1) + " <small>" + paceLabel() + "</small>" : "—";
+  $("stRound").textContent = live.ok && live.settledThrough > 0 ? ("#" + (live.settledThrough + 1)) : "—";
   $("stHamDamage").textContent = fmt(S.sessionHamDamage);
   layoutZones();
 }
-
-function renderCountdown(){
-  if (!live.nextSettleAt) { $("stCountdown").textContent = "—"; return; }
-  var left = Math.max(0, Math.round(live.nextSettleAt - nowSec()));
-  var m = Math.floor(left / 60), s = left % 60;
-  $("stCountdown").textContent = m + ":" + ("0" + s).slice(-2);
+function paceLabel(){
+  if (!live.ok) return "";
+  if (!live.running) return "Nap";
+  if (live.rpm < 10) return "Stroll";
+  if (live.rpm < 25) return "Jog";
+  return "SPRINT";
 }
-
-function renderAll(){
+function renderCountdown(){
+  if (!live.nextSettleAt) { $("stCountdown").textContent = "—"; }
+  else {
+    var left = Math.max(0, Math.round(live.nextSettleAt - nowSec()));
+    var m = Math.floor(left / 60), s = left % 60;
+    $("stCountdown").textContent = m + ":" + ("0" + s).slice(-2);
+  }
+  renderOverlay();
+}
+function renderOverlay(){
+  if (!document.body.classList.contains("overlay")) return;
   var b = BOSSES[S.bossIndex];
   var max = bossMaxHp();
+  $("ovBoss").textContent = b.name + " — " + fmt(Math.max(0, S.bossHp)) + " HP";
+  $("ovHpFill").style.width = Math.max(0, Math.min(100, S.bossHp / max * 100)) + "%";
+  $("ovRpm").textContent = live.ok ? (live.rpm.toFixed(1) + " RPM · " + paceLabel()) : "— RPM";
+  $("ovRound").textContent = live.settledThrough > 0 ? ("Round #" + (live.settledThrough + 1)) : "Round —";
+  $("ovCountdown").textContent = "Settles " + $("stCountdown").textContent;
+  $("ovLevel").textContent = "Lv " + S.level + " · " + passTitle(S.witnessedMeters);
+}
+
+/* ---------------- rendering: arena + side ---------------- */
+function renderAll(){ renderArena(); renderSide(); }
+function renderArena(){
+  var b = BOSSES[S.bossIndex];
+  var max = bossMaxHp();
+  var mem = bossMemory(S, S.bossIndex);
   $("bossName").textContent = b.name;
   $("bossTitle").textContent = b.title;
   $("bossMeta").textContent = "Boss " + (S.bossIndex + 1) + " of " + BOSSES.length +
     (S.bossCycle > 0 ? " · Cycle " + (S.bossCycle + 1) + " (tougher)" : "") +
     " · Bosses beaten: " + S.stats.bossesBeaten;
+  $("bossMemory").textContent = mem.beaten > 0
+    ? ("Felled ×" + mem.beaten + " · Last felled by " + (mem.lastKiller || "—") +
+       " · Best hit taken: " + fmt(mem.bestHit) + (mem.scarRound ? " · Scarred in round #" + mem.scarRound : ""))
+    : "Never defeated. Yet.";
   var art = $("bossArt");
   art.style.setProperty("--bosslight", b.c1);
   art.style.setProperty("--boss", b.c2);
   art.style.background = "radial-gradient(circle at 35% 30%, " + b.c1 + ", " + b.c2 + " 70%)";
+  art.classList.toggle("scarred", mem.beaten > 0);
   $("bossCrown").style.display = b.crown ? "block" : "none";
   $("hpText").innerHTML = "<b>" + fmt(Math.max(0, S.bossHp)) + "</b> / " + fmt(max);
   var pct = Math.max(0, Math.min(100, S.bossHp / max * 100));
@@ -881,35 +1622,251 @@ function renderAll(){
   $("hpBar").setAttribute("aria-valuenow", Math.round(pct));
   $("hpBar").setAttribute("aria-valuemax", max);
 
+  document.body.classList.toggle("has-shield", S.bossShield > 0);
+  if (S.bossShield > 0) {
+    var shieldMax = Math.round(max * 0.12);
+    $("shieldFill").style.width = Math.min(100, S.bossShield / shieldMax * 100) + "%";
+    $("shieldLabel").style.display = "flex";
+    $("shieldText").textContent = fmt(S.bossShield) + " HP of lint";
+  } else {
+    $("shieldLabel").style.display = "none";
+  }
+
+  var guard = mechActive();
+  document.body.classList.toggle("guard-active", guard);
+  if (guard) {
+    var left = Math.ceil((S.mechUntil - Date.now()) / 1000);
+    $("mechBanner").innerHTML = "<b>" + b.mech.name + "</b> — " + b.mech.desc + " <b>" + left + "s</b>";
+  }
+  document.body.classList.toggle("enraged", S.enrageStacks > 0);
+  if (S.enrageStacks > 0) {
+    $("enrageBanner").textContent = "ENRAGED ×" + S.enrageStacks + " — your damage is cut by " +
+      Math.round((1 - enrageDamageMult()) * 100) + "%. Finish him before the next deadline (round #" +
+      (S.engagedRound !== null ? (S.engagedRound + b.rounds * (S.enrageStacks + 1)) : "—") + ").";
+  }
+
+  var alive = comboAlive();
+  if (!alive && combo.count > 0) combo.count = 0;
+  document.body.classList.toggle("combo-hot", combo.count >= 3);
+  $("comboLabel").textContent = "COMBO ×" + combo.count + (combo.count > 0 ? " (damage ×" + comboMult().toFixed(1) + ")" : "");
+  $("comboFlames").textContent = combo.count >= 2 ? new Array(Math.min(10, combo.count) + 1).join("▲") : "";
+  $("surgeLine").textContent = S.surge > 0 ? ("⚡ Surge ×" + S.surge + " banked") : "";
+
   var cap = energyCap();
   $("energyText").innerHTML = "Energy <b>" + S.energy + "</b> / " + cap +
-    " &nbsp;·&nbsp; next +1 in ~" + Math.max(0, Math.ceil((1 - S.energyAcc) * METERS_PER_ENERGY)) + " m of wheel";
-  var pips = "";
-  for (var i = 0; i < cap; i++) pips += '<span class="pip' + (i < S.energy ? " on" : "") + '"></span>';
-  $("energyPips").innerHTML = pips;
+    " &nbsp;·&nbsp; next +1 in ~" + Math.max(0, Math.ceil((1 - S.energyAcc) * METERS_PER_ENERGY)) + " m of wheel" +
+    (attackCost() > 1 ? " &nbsp;·&nbsp; <b>Deep Freeze: attacks cost 2</b>" : "");
+  var pipsHtml = "";
+  for (var i = 0; i < cap; i++) pipsHtml += '<span class="pip' + (i < S.energy ? " on" : "") + '"></span>';
+  $("energyPips").innerHTML = pipsHtml;
 
   var fb = $("focusBtn");
   var cd = Math.ceil((S.focusReadyAt - Date.now()) / 1000);
   if (cd > 0) { fb.disabled = true; fb.textContent = "Focus (" + cd + "s)"; }
-  else { fb.disabled = false; fb.textContent = "Focus +1"; }
+  else { fb.disabled = false; fb.textContent = (S.companion === "mochi") ? "Focus +2" : "Focus +1"; }
   $("attackBtn").disabled = S.bossHp <= 0;
-
+}
+function renderSide(){
+  renderCompanion();
+  ensureQuests();
   $("kvLevel").textContent = S.level;
-  $("kvCap").textContent = cap;
+  $("kvTitle").textContent = passTitle(S.witnessedMeters);
+  $("kvCap").textContent = energyCap();
   $("kvDmg").textContent = baseDamage();
+  $("kvTokens").textContent = fmt(S.tokens);
   $("kvXp").textContent = fmt(S.xp) + " / " + fmt(xpForNext(S.level));
   $("xpFill").style.width = Math.min(100, S.xp / xpForNext(S.level) * 100) + "%";
   $("kvAttacks").textContent = fmt(S.stats.attacks);
   $("kvPerfects").textContent = fmt(S.stats.perfects);
+  $("kvBestCombo").textContent = "×" + (S.stats.bestCombo || 0);
   $("kvPlayerDmg").textContent = fmt(S.stats.playerDamage);
   $("kvHamDmg").textContent = fmt(S.stats.hamsterDamage);
   $("kvBosses").textContent = fmt(S.stats.bossesBeaten);
   $("stHamDamage").textContent = fmt(S.sessionHamDamage);
 
+  /* quests */
+  $("questList").innerHTML = S.quests.list.map(function(q){
+    var def = questDef(q.id);
+    var prog = (q.id === "distance") ? Math.min(def.target, Math.floor(S.quests.distanceToday || 0)) : q.progress;
+    var shown = q.done ? def.target : prog;
+    return '<div class="quest' + (q.done ? " done" : "") + '">' +
+      '<div class="qhead"><span class="qname">' + def.name + '</span><span class="qreward">+1 Token · +50 XP</span></div>' +
+      '<div class="qbar"><div class="qfill" style="width:' + Math.min(100, shown / def.target * 100) + '%"></div></div>' +
+      '<div class="qprog">' + def.blurb + " — " + fmt(shown) + " / " + fmt(def.target) + " " + def.unit + "</div></div>";
+  }).join("");
+
+  /* wheel pass */
+  $("passMeters").textContent = fmt(S.witnessedMeters) + " m";
+  var tiers = PASS_TIERS;
+  var nextTier = null, prevM = 0;
+  for (var i = 0; i < tiers.length; i++) {
+    if (S.witnessedMeters >= tiers[i].m) prevM = tiers[i].m;
+    if (S.witnessedMeters < tiers[i].m) { nextTier = tiers[i]; break; }
+  }
+  $("passFill").style.width = nextTier
+    ? Math.min(100, (S.witnessedMeters - prevM) / (nextTier.m - prevM) * 100) + "%" : "100%";
+  $("tierRow").innerHTML = tiers.map(function(t){
+    var cls = (S.witnessedMeters >= t.m) ? "tier on" : (nextTier && t.m === nextTier.m ? "tier next" : "tier");
+    return '<span class="' + cls + '">' + t.title + "<br>" + fmt(t.m) + " m</span>";
+  }).join("");
+
+  /* upgrades */
+  $("upgList").innerHTML = UPGRADES.map(function(u){
+    var lvl = S.upgrades[u.id] || 0;
+    var maxed = lvl >= u.max;
+    var cost = maxed ? null : u.cost(lvl);
+    var dots = "";
+    for (var d = 0; d < u.max; d++) dots += (d < lvl ? "●" : "○");
+    return '<div class="upg"><div class="uinfo"><b>' + u.name + '</b> <span class="udots">' + dots + '</span><br>' + u.desc + '</div>' +
+      (maxed ? '<button disabled>MAX</button>'
+             : '<button data-upg="' + u.id + '" ' + (S.tokens < cost ? "disabled" : "") + '>Buy · ' + cost + ' Token' + (cost > 1 ? "s" : "") + '</button>') +
+      "</div>";
+  }).join("");
+  Array.prototype.forEach.call(document.querySelectorAll("[data-upg]"), function(btn){
+    btn.addEventListener("click", function(){ buyUpgrade(btn.getAttribute("data-upg")); });
+  });
+
   $("badgeRow").innerHTML = BADGES.map(function(bd){
     var earned = S.badges.indexOf(bd.id) !== -1;
     return '<span class="badge' + (earned ? " earned" : "") + '">' + (earned ? "★ " : "") + bd.label + "</span>";
   }).join("");
+}
+function buyUpgrade(id){
+  var u = null;
+  UPGRADES.forEach(function(x){ if (x.id === id) u = x; });
+  if (!u) return;
+  var lvl = S.upgrades[id] || 0;
+  if (lvl >= u.max) return;
+  var cost = u.cost(lvl);
+  if (S.tokens < cost) return;
+  S.tokens -= cost;
+  S.tokensSpent += cost;
+  S.upgrades[id] = lvl + 1;
+  addLog("upg", "Upgrade bought: <b>" + u.name + "</b> level " + (lvl + 1) + " for " + cost + " Raid Token" + (cost > 1 ? "s" : "") + ".");
+  sfx("buy");
+  if (id === "battery") S.energy = Math.min(energyCap(), S.energy + 2);
+  save();
+  renderAll();
+  layoutZones();
+}
+
+/* ---------------- rendering: timeline / almanac / economy / proof ---------------- */
+function renderTimeline(){
+  if (!timelineData) return;
+  var list = (timelineData.recentSettlements || []).slice().sort(function(a, b){
+    return num(b.settledThroughRound) - num(a.settledThroughRound);
+  });
+  var sum = timelineData.summary || {};
+  $("timelineSummary").textContent =
+    fmt(num(sum.settlementCount)) + " settlements in 7 days · " + fmt(num(sum.workAdded)) +
+    " wheel passes settled · " + fmt(num(sum.completedBlockCount)) + " blocks completed. " +
+    "Each row below is a real settlement — tap the tx to verify it on Etherscan.";
+  $("timelineList").innerHTML = list.slice(0, 12).map(function(b){
+    var from = num(b.previousSettledThroughRound) + 1, through = num(b.settledThroughRound);
+    var when = b.blockTimestamp ? new Date(b.blockTimestamp).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
+    return "<li><span class='tt'>" + when + " UTC</span><span>Round" + (from === through ? "" : "s") + " <b>#" +
+      (from === through ? through : (from + "–#" + through)) + "</b></span><span class='tw'>" + fmt(num(b.workAdded)) +
+      " work</span><span>" + fmt(num(b.completedBlockCount)) + " blocks</span>" +
+      (b.transactionHash ? '<a href="https://sepolia.etherscan.io/tx/' + b.transactionHash + '" target="_blank" rel="noopener">tx ↗</a>' : "") + "</li>";
+  }).join("");
+  drawSpark(list.slice(0, 30).reverse());
+}
+function drawSpark(rows){
+  var cv = $("sparkCanvas");
+  if (!cv || !rows.length) return;
+  var ctx = cv.getContext("2d");
+  var W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = "#1a140e"; ctx.fillRect(0, 0, W, H);
+  var vals = rows.map(function(b){ return num(b.workAdded); });
+  var max = Math.max.apply(null, vals.concat([1]));
+  var step = W / vals.length;
+  vals.forEach(function(v, i){
+    var h = Math.max(2, v / max * (H - 26));
+    ctx.fillStyle = "#53b1fd";
+    ctx.fillRect(i * step + 2, H - 14 - h, Math.max(2, step - 4), h);
+  });
+  ctx.fillStyle = "#b8a58c";
+  ctx.font = "11px system-ui, sans-serif";
+  ctx.fillText("work per settlement (oldest → newest), peak " + fmt(max) + " passes", 8, 14);
+}
+function renderAlmanac(){
+  if (!statsData) return;
+  var life = statsData.lifetime || {};
+  $("almDistance").innerHTML = (num(life.observedDistanceMm) / 1e6).toFixed(2) + " <small>km</small>";
+  $("almWork").textContent = fmt(num(life.acceptedWorkUnits)) + " passes";
+  $("almDays").textContent = fmt(num(life.activeDayCount));
+  var summ = (statsData.activity && statsData.activity.summary) || {};
+  $("almBest").textContent = summ.mostActiveDate ? (summ.mostActiveDate + " · " + fmt(num(summ.mostActiveDateWorkUnits)) + " passes") : "—";
+  var peakMin = num(summ.peakWindowStartMinuteUtc);
+  if (peakMin) {
+    var hh = Math.floor(peakMin / 60), mm = peakMin % 60;
+    $("almPeak").textContent = "Squeektoshi's peak running window starts around " +
+      ("0" + hh).slice(-2) + ":" + ("0" + mm).slice(-2) + " UTC — plan your raid buffs accordingly. " +
+      "Career settlements so far: " + fmt(num(life.settlementCount)) + ".";
+  }
+  var days = (statsData.activity && statsData.activity.days) || statsData.days || [];
+  drawAlmanac(days);
+}
+function drawAlmanac(days){
+  var cv = $("almanacCanvas");
+  if (!cv) return;
+  var ctx = cv.getContext("2d");
+  var W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = "#1a140e"; ctx.fillRect(0, 0, W, H);
+  var rows = days.filter(function(d){ return d && d.distanceMm !== null && d.distanceMm !== undefined; })
+                 .map(function(d){ return { date: d.date, km: num(d.distanceMm) / 1e6 }; });
+  if (!rows.length) {
+    ctx.fillStyle = "#b8a58c"; ctx.font = "12px system-ui, sans-serif";
+    ctx.fillText("No measured days in this window yet.", 10, 24);
+    return;
+  }
+  var max = Math.max.apply(null, rows.map(function(r){ return r.km; }).concat([0.01]));
+  var step = W / rows.length;
+  rows.forEach(function(r, i){
+    var h = Math.max(2, r.km / max * (H - 30));
+    ctx.fillStyle = "#f5a623";
+    ctx.fillRect(i * step + 1.5, H - 16 - h, Math.max(2, step - 3), h);
+  });
+  ctx.fillStyle = "#b8a58c";
+  ctx.font = "11px system-ui, sans-serif";
+  ctx.fillText("distance per day (km), best " + max.toFixed(2) + " km — hover the real API, we just draw it", 8, 14);
+}
+function renderEcon(){
+  if (!econData) { return; }
+  var asset = econData.asset || {};
+  var supply = econData.supply || {};
+  var dec = num(asset.decimals, 18);
+  function human(baseUnits){
+    var v = num(baseUnits) / Math.pow(10, dec);
+    if (v >= 1e6) return (v / 1e6).toFixed(2) + "M";
+    if (v >= 1e3) return (v / 1e3).toFixed(1) + "k";
+    return v.toFixed(2);
+  }
+  var tokenAddr = "";
+  try { tokenAddr = econData.deployment.components.token.address || ""; } catch(e){}
+  $("econLine").innerHTML = "<b>" + (asset.symbol || "SQK") + "</b> live supply: <b>" + human(supply.liveSupplyBaseUnits) +
+    "</b> of " + human(supply.capBaseUnits) + " cap · mined so far: " + human(supply.miningMintedBaseUnits) +
+    (tokenAddr ? ' · token <a href="https://sepolia.etherscan.io/token/' + tokenAddr + '" target="_blank" rel="noopener">' +
+      tokenAddr.slice(0, 8) + "…" + tokenAddr.slice(-6) + "</a> (Sepolia testnet — a snapshot, not a market)" : "");
+}
+function renderProof(){
+  if (!document.body.classList.contains("reviewer")) return;
+  var m = live.raw || {};
+  var lines = [];
+  lines.push("SQUEEK RAID v" + APP_VERSION + " — live proof panel");
+  lines.push("last /status fetch: " + (live.lastStatusAt ? new Date(live.lastStatusAt).toLocaleTimeString("en-GB") : "—"));
+  lines.push("raw measurement: coreStatus=" + (m.coreStatus || "—") + " · rpmMilli=" + (m.rpmMilli !== undefined ? m.rpmMilli : "—") +
+             " · speedMmPerSecond=" + (m.speedMmPerSecond !== undefined ? m.speedMmPerSecond : "—") +
+             " · distanceMm=" + (m.distanceMm !== undefined ? m.distanceMm : "—"));
+  lines.push("derivation: RUNNING := rpmMilli>0 (" + (num(m.rpmMilli) > 0) + ") OR speed>0 (" + (num(m.speedMmPerSecond) > 0) + ") → " + (live.running ? "RUNNING" : "RESTING"));
+  lines.push("counterEpoch: " + (live.counterEpoch || S.lastEpoch || "—"));
+  lines.push("settledThroughRound (anchor): " + (live.settledThrough || "—") + " · open round: " + (live.settledThrough ? live.settledThrough + 1 : "—") + " · blockHeight: " + (live.blockHeight || "—"));
+  lines.push("settlement baseline (lastSettled in save): " + (S.lastSettled === null ? "not set yet" : S.lastSettled) + " — first read never deals damage");
+  lines.push("last settlement poll: " + (live.lastSettlePollAt ? new Date(live.lastSettlePollAt).toLocaleTimeString("en-GB") : "—"));
+  lines.push("surge banked: " + S.surge + " · combo best: ×" + (S.stats.bestCombo || 0) + " · witnessed metres: " + fmt(S.witnessedMeters));
+  $("proofText").textContent = lines.join("\n");
 }
 
 /* ---------------- export / import / reset ---------------- */
@@ -922,7 +1879,50 @@ function exportSave(){
   a.click();
   a.remove();
   setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
-  pipSay("Save exported. Guard it with your life. Or, you know, a folder.");
+  compSay("Save exported. Guard it with your life. Or, you know, a folder.");
+}
+function exportBadge(){
+  function esc(s){ return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+  var title = passTitle(S.witnessedMeters);
+  var week = isoWeekKey(new Date());
+  var meta = { name: "SQUEEK RAID Raider Badge — " + title, description: "A dynamic badge from SQUEEK RAID, the Squeekchain Genesis boss-raid game. Stats are a snapshot of one raider's local career.",
+    attributes: [
+      { trait_type: "Title", value: title },
+      { trait_type: "Level", value: S.level },
+      { trait_type: "Bosses Beaten", value: S.stats.bossesBeaten },
+      { trait_type: "Best Combo", value: S.stats.bestCombo || 0 },
+      { trait_type: "Witnessed Metres", value: Math.round(S.witnessedMeters) },
+      { trait_type: "Week", value: week }
+    ] };
+  var svg =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480">' +
+  '<metadata>' + esc(JSON.stringify(meta)) + '</metadata>' +
+  '<rect width="480" height="480" fill="#14100c"/>' +
+  '<circle cx="240" cy="215" r="128" fill="none" stroke="#f5a623" stroke-width="12"/>' +
+  '<g stroke="#c47f10" stroke-width="5">' +
+  '<line x1="240" y1="215" x2="240" y2="95"/><line x1="240" y1="215" x2="345" y2="155"/><line x1="240" y1="215" x2="345" y2="275"/>' +
+  '<line x1="240" y1="215" x2="240" y2="335"/><line x1="240" y1="215" x2="135" y2="275"/><line x1="240" y1="215" x2="135" y2="155"/></g>' +
+  '<circle cx="218" cy="128" r="17" fill="#c98d45"/><circle cx="262" cy="128" r="17" fill="#c98d45"/>' +
+  '<circle cx="218" cy="128" r="8" fill="#e88ca0"/><circle cx="262" cy="128" r="8" fill="#e88ca0"/>' +
+  '<circle cx="240" cy="180" r="46" fill="#e8b06a"/>' +
+  '<circle cx="224" cy="172" r="6" fill="#14100c"/><circle cx="256" cy="172" r="6" fill="#14100c"/>' +
+  '<ellipse cx="240" cy="188" rx="9" ry="6.5" fill="#e88ca0"/>' +
+  '<text x="240" y="52" text-anchor="middle" font-family="Verdana, sans-serif" font-size="30" font-weight="900" fill="#ffd94d">SQUEEK RAID</text>' +
+  '<text x="240" y="392" text-anchor="middle" font-family="Verdana, sans-serif" font-size="24" font-weight="800" fill="#f7ead2">' + esc(title) + '</text>' +
+  '<text x="240" y="424" text-anchor="middle" font-family="Verdana, sans-serif" font-size="16" fill="#b8a58c">Level ' + S.level +
+    ' · Bosses felled ' + S.stats.bossesBeaten + ' · Best combo ×' + (S.stats.bestCombo || 0) + '</text>' +
+  '<text x="240" y="450" text-anchor="middle" font-family="Verdana, sans-serif" font-size="13" fill="#8a7a63">Week ' + esc(week) +
+    ' · ' + fmt(S.witnessedMeters) + ' m witnessed · a Squeekchain Genesis game by kingklowor</text>' +
+  '</svg>';
+  var blob = new Blob([svg], { type: "image/svg+xml" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "squeek-raid-badge.svg";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  compSay("Badge minted — well, drawn. It's an SVG with your career in it, metadata and all. If the wheel ever gets a mint, you're ready.");
 }
 function importSaveFile(file){
   var reader = new FileReader();
@@ -930,18 +1930,17 @@ function importSaveFile(file){
     try {
       var d = JSON.parse(reader.result);
       if (!d || typeof d !== "object" || !d.stats || typeof d.bossHp !== "number") throw new Error("bad save");
-      var base = defaultState();
-      for (var k in base) { if (d[k] !== undefined) base[k] = d[k]; }
-      S = base;
-      if (S.bossIndex < 0 || S.bossIndex >= BOSSES.length) S.bossIndex = 0;
+      S = normalizeState(d);
       if (S.bossHp <= 0 || S.bossHp > bossMaxHp()) S.bossHp = bossMaxHp();
       S.energy = Math.min(S.energy, energyCap());
+      ensureQuests();
       save();
       renderAll();
+      renderLive();
       addLog("save", "Save imported. Welcome back, raider.");
-      pipSay("Save loaded! Pip remembers everything. Pip remembers EVERYTHING.");
+      compSay("Save loaded! Every scar, every token — right where you left them.");
     } catch(e) {
-      pipSay("That file isn't a SQUEEK RAID save. My disappointment is immeasurable.");
+      compSay("That file isn't a SQUEEK RAID save. My disappointment is immeasurable.");
     }
   };
   reader.readAsText(file);
@@ -955,44 +1954,76 @@ function applyWeeklyRotation(){
     S.weekKey = key;
     S.bossIndex = (S.bossIndex + 1) % BOSSES.length;
     S.bossHp = bossMaxHp();
+    S.bossShield = 0; S.mechUntil = 0; S.mechArmed66 = true; S.mechArmed33 = true; S.enrageStacks = 0;
+    S.engagedRound = live.settledThrough > 0 ? live.settledThrough : null;
     addLog("boss", "A new week dawns on Squeekchain, and a new boss rotates in: <b>" + BOSSES[S.bossIndex].name + "</b>.");
-    pipSay("New week, new boss! " + BOSSES[S.bossIndex].name + " has entered the arena. Try to look surprised.");
+    compSay("New week, new boss! " + BOSSES[S.bossIndex].name + " has entered the arena. Try to look surprised.");
   }
 }
 
 /* ---------------- boot ---------------- */
 function boot(){
-  var hadSave = load();
+  var loadedFrom = load();
+  var hadSave = loadedFrom !== false;
   var awayMs = hadSave && S.lastSeen ? (Date.now() - S.lastSeen) : 0;
   S.totalVisits += 1;
+  ensureQuests();
   applyWeeklyRotation();
   if (S.bossHp <= 0) S.bossHp = bossMaxHp();
   if (S.bossHp > bossMaxHp()) S.bossHp = bossMaxHp();
+  if (S.engagedRound === null) S.engagedRound = null; /* set on first status read */
   checkBadges();
   save();
+
+  if (/[?&]overlay=1/.test(window.location.search)) document.body.classList.add("overlay");
 
   $("attackBtn").addEventListener("click", attack);
   $("focusBtn").addEventListener("click", focus);
   $("exportBtn").addEventListener("click", exportSave);
+  $("badgeBtn").addEventListener("click", exportBadge);
   $("importBtn").addEventListener("click", function(){ $("importFile").click(); });
   $("importFile").addEventListener("change", function(ev){
     if (ev.target.files && ev.target.files[0]) importSaveFile(ev.target.files[0]);
     ev.target.value = "";
   });
   $("resetBtn").addEventListener("click", function(){
-    if (confirm("Reset ALL SQUEEK RAID progress? Bosses, levels, badges — everything?")) {
-      try { localStorage.removeItem(SAVE_KEY); } catch(e){}
+    if (confirm("Reset ALL SQUEEK RAID progress? Bosses, levels, badges, tokens — everything?")) {
+      try { localStorage.removeItem(SAVE_KEY_V2); localStorage.removeItem(SAVE_KEY_V1); } catch(e){}
       S = defaultState();
       S.weekKey = isoWeekKey(new Date());
+      ensureQuests();
       logEntries = [];
+      combo.count = 0;
       save();
       renderAll();
+      renderLive();
       addLog("save", "Progress reset. A fresh raid begins.");
-      pipSay("Clean slate! New raid, new glory, same hamster.");
+      compSay("Clean slate! New raid, new glory, same hamster.");
     }
   });
+  ["pip", "mochi", "captain"].forEach(function(id){
+    var btn = $("comp" + id.charAt(0).toUpperCase() + id.slice(1));
+    if (btn) btn.addEventListener("click", function(){ setCompanion(id); });
+  });
+  $("reviewerBtn").addEventListener("click", function(){
+    var on = document.body.classList.toggle("reviewer");
+    this.classList.toggle("active", on);
+    this.setAttribute("aria-pressed", on ? "true" : "false");
+    this.textContent = on ? "Reviewer mode: hide the proof" : "Reviewer mode: show the proof";
+    renderProof();
+  });
+  $("soundBtn").addEventListener("click", function(){
+    S.soundOn = !S.soundOn;
+    this.classList.toggle("active", S.soundOn);
+    this.setAttribute("aria-pressed", S.soundOn ? "true" : "false");
+    this.textContent = S.soundOn ? "Sound: on" : "Sound: off";
+    save();
+    if (S.soundOn) sfx("good");
+  });
+  $("soundBtn").classList.toggle("active", S.soundOn !== false);
+  $("soundBtn").textContent = (S.soundOn !== false) ? "Sound: on" : "Sound: off";
   document.addEventListener("keydown", function(ev){
-    if (ev.code === "Space" && !ev.repeat && ev.target.tagName !== "INPUT" && ev.target.tagName !== "TEXTAREA") {
+    if (ev.code === "Space" && !ev.repeat && ev.target.tagName !== "INPUT" && ev.target.tagName !== "TEXTAREA" && ev.target.tagName !== "BUTTON") {
       ev.preventDefault();
       attack();
     }
@@ -1003,29 +2034,38 @@ function boot(){
   layoutZones();
 
   if (!hadSave || S.totalVisits <= 1) {
-    pipSay("First raid? Perfect. I'm Pip. The hamster up top is Squeektoshi — real wheel, real running, real damage. Time your strikes in the gold, and let's flatten some bosses.");
+    compSay(pick(compLines("greetingFirst")));
     addLog("start", "Welcome to SQUEEK RAID. Your first boss: <b>" + BOSSES[S.bossIndex].name + "</b>.");
+  } else if (loadedFrom === "v1-migrated") {
+    compSay("Your v1 raid file just got promoted to v2 — every boss, badge and point carried over. New toys: quests, Surge, the Upgrade Tree. Check the cards on the right.");
+    addLog("start", "Save migrated from v1 to v2. All progress kept.");
   } else if (awayMs > 24 * 3600 * 1000) {
     var days = Math.floor(awayMs / (24 * 3600 * 1000));
-    pipSay("You're back! " + days + " day" + (days === 1 ? "" : "s") + " away — the bosses held a little party. Rude. " +
-      "You've beaten " + S.stats.bossesBeaten + " of them so far; " + BOSSES[S.bossIndex].name + " is still waiting.");
+    compSay(pick(compLines("greetingLong")).replace("{days}", days));
     addLog("start", "Welcome back after " + days + "d away. Boss progress kept: <b>" + BOSSES[S.bossIndex].name + "</b> at " + fmt(S.bossHp) + " HP.");
   } else {
-    pipSay(pick([
-      "Back again! " + BOSSES[S.bossIndex].name + " is at " + fmt(S.bossHp) + " HP. We left a dent; let's finish the job.",
-      "Raider returns! Career totals: " + fmt(S.stats.playerDamage) + " damage by you, " + fmt(S.stats.hamsterDamage) + " by the hamster. Solid duo."
-    ]));
+    compSay(pick(compLines("greetingBack")));
     addLog("start", "Raid resumed. Current boss: <b>" + BOSSES[S.bossIndex].name + "</b> at " + fmt(S.bossHp) + " HP.");
   }
 
   pollStatus();
   pollSettlements();
+  pollSlow();
   setInterval(pollStatus, STATUS_MS);
   setInterval(pollSettlements, SETTLE_MS);
+  setInterval(pollSlow, SLOW_MS);
   setInterval(renderCountdown, 500);
-  setInterval(pipRotate, 4000);
-  setInterval(renderAll, 1000);           /* keeps Focus cooldown + energy pips fresh */
+  setInterval(compRotate, 4000);
+  setInterval(function(){ renderArena(); }, 1000);   /* combo decay, mech countdown, focus cooldown */
   requestAnimationFrame(frameLoop);
+
+  /* set the enrage engagement round as soon as we know where the chain is */
+  var engageTimer = setInterval(function(){
+    if (live.settledThrough > 0) {
+      if (S.engagedRound === null) { S.engagedRound = live.settledThrough; save(); }
+      clearInterval(engageTimer);
+    }
+  }, 3000);
 }
 
 document.addEventListener("DOMContentLoaded", boot);
