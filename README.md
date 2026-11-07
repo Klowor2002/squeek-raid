@@ -1,3 +1,5 @@
+> **SUPERSEDED — this project moved to [Klowor2002/squeek-works](https://github.com/Klowor2002/squeek-works).** Play it live: [GitHub Pages](https://klowor2002.github.io/squeek-works/) · [Vercel](https://squeek-works-kingklowor-project.vercel.app/). This repo (squeek-raid) is kept only as history; the SQUEEK WORKS project lives at the new home.
+
 # SQUEEK WORKS
 
 <!-- SQUEEKCHAIN-VERIFY: Rendi — paste the repository verification line from your Genesis project page here, replacing this comment. -->
